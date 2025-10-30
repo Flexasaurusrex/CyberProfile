@@ -1,0 +1,34 @@
+# Backend files (deploy these to Railway instead)
+server.js
+package.json
+package-lock.json
+.env
+.env.*
+
+# Hardhat files (not needed for frontend)
+hardhat.config.js
+contracts/
+scripts/
+test/
+artifacts/
+cache/
+
+# Node modules (will be installed if needed)
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed on live site)
+docs/
+README.md
+LICENSE
+
+# Deployment scripts
+deploy.sh
+
+# IDE
+.vscode/
+.idea/
+.DS_Store

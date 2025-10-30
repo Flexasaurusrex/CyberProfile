@@ -20,7 +20,7 @@ app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
 const PINATA_API_KEY = process.env.PINATA_API_KEY;
 const PINATA_SECRET = process.env.PINATA_SECRET;
-const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY;
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 
 // Contract configuration
@@ -107,7 +107,7 @@ async function verifyFarcasterSignature(message, signature, fid) {
 // ===== IMAGE TRANSFORMATION =====
 
 /**
- * Transform profile picture using Replicate API
+ * Transform profile picture using Together.ai API
  */
 async function transformToCyberpunk(imageUrl, fid) {
     try {
@@ -117,59 +117,36 @@ async function transformToCyberpunk(imageUrl, fid) {
             return transformCache.get(cacheKey);
         }
 
-        // Use Replicate's SDXL model for cyberpunk transformation
+        // Use Together.ai's Stable Diffusion XL for cyberpunk transformation
         const response = await axios.post(
-            'https://api.replicate.com/v1/predictions',
+            'https://api.together.xyz/v1/images/generations',
             {
-                version: "39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-                input: {
-                    image: imageUrl,
-                    prompt: "cyberpunk futuristic neon portrait, highly detailed, digital art, concept art, trending on artstation, dramatic lighting, neon colors, holographic elements, augmented reality, chrome and glass, dystopian aesthetic, 8k, masterpiece",
-                    negative_prompt: "ugly, blurry, low quality, distorted, deformed",
-                    num_outputs: 1,
-                    guidance_scale: 7.5,
-                    num_inference_steps: 30,
-                    scheduler: "K_EULER"
-                }
+                model: "stabilityai/stable-diffusion-xl-base-1.0",
+                prompt: "cyberpunk futuristic neon portrait, highly detailed, digital art, concept art, trending on artstation, dramatic lighting, neon colors, holographic elements, augmented reality, chrome and glass, dystopian aesthetic, 8k, masterpiece",
+                negative_prompt: "ugly, blurry, low quality, distorted, deformed, duplicate, worst quality",
+                width: 1024,
+                height: 1024,
+                steps: 30,
+                n: 1,
+                seed: Math.floor(Math.random() * 1000000)
             },
             {
                 headers: {
-                    'Authorization': `Token ${REPLICATE_API_TOKEN}`,
+                    'Authorization': `Bearer ${TOGETHER_API_KEY}`,
                     'Content-Type': 'application/json'
                 }
             }
         );
 
-        let prediction = response.data;
-        
-        // Poll for completion
-        while (prediction.status !== 'succeeded' && prediction.status !== 'failed') {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const statusResponse = await axios.get(
-                `https://api.replicate.com/v1/predictions/${prediction.id}`,
-                {
-                    headers: {
-                        'Authorization': `Token ${REPLICATE_API_TOKEN}`
-                    }
-                }
-            );
-            
-            prediction = statusResponse.data;
-        }
-
-        if (prediction.status === 'failed') {
-            throw new Error('Image transformation failed');
-        }
-
-        const transformedUrl = prediction.output[0];
+        // Together.ai returns the image URL directly
+        const transformedUrl = response.data.data[0].url;
         
         // Cache the result
         transformCache.set(cacheKey, transformedUrl);
         
         return transformedUrl;
     } catch (error) {
-        console.error('Error transforming image:', error);
+        console.error('Error transforming image with Together.ai:', error.response?.data || error.message);
         throw new Error('Failed to transform image');
     }
 }

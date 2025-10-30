@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberProfile - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #000a1a 100%);
+            color: #00ff9f;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            border: 2px solid #ff00ff;
+            border-radius: 10px;
+            background: rgba(255, 0, 255, 0.1);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px #ff00ff;
+        }
+
+        .section {
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #00ff9f;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 0 20px rgba(0, 255, 159, 0.2);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #00ff9f;
+            border-bottom: 2px solid #00ff9f;
+            padding-bottom: 0.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(0, 255, 159, 0.1) 0%, rgba(0, 184, 255, 0.1) 100%);
+            border: 2px solid #00ff9f;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px rgba(0, 255, 159, 0.4);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #00ff9f;
+            margin-bottom: 0.5rem;
+            opacity: 0.8;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px #00ff9f;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #00ff9f;
+            font-weight: bold;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #00ff9f;
+            border-radius: 8px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #ff00ff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+
+        .form-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00ff9f 0%, #00b8ff 100%);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 255, 159, 0.6);
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-danger {
+            background: linear-gradient(135deg, #ff0000 0%, #ff00ff 100%);
+        }
+
+        .button-warning {
+            background: linear-gradient(135deg, #ff9900 0%, #ffff00 100%);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 0, 255, 0.1);
+            border: 2px solid #ff00ff;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ff0000;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #00ff9f;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: 2px solid;
+            font-weight: bold;
+        }
+
+        .alert-success {
+            background: rgba(0, 255, 159, 0.2);
+            border-color: #00ff9f;
+            color: #00ff9f;
+        }
+
+        .alert-error {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: #ff0000;
+            color: #ff0000;
+        }
+
+        .alert-info {
+            background: rgba(0, 184, 255, 0.2);
+            border-color: #00b8ff;
+            color: #00b8ff;
+        }
+
+        .recent-mints {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .mint-item {
+            padding: 1rem;
+            background: rgba(0, 255, 159, 0.05);
+            border-left: 3px solid #00ff9f;
+            margin-bottom: 0.5rem;
+            border-radius: 5px;
+        }
+
+        .mint-item:hover {
+            background: rgba(0, 255, 159, 0.1);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #00ff9f;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff9f 0%, #00b8ff 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 255, 159, 0.3);
+            border-radius: 50%;
+            border-top-color: #00ff9f;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>🎛️ CYBERPROFILE ADMIN</h1>
+            <p>Dynamic Parameter Control Dashboard</p>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alertContainer"></div>
+
+        <!-- Live Stats -->
+        <div class="section">
+            <h2 class="section-title">📊 Live Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Minted</div>
+                    <div class="stat-value" id="totalMinted">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Max Supply</div>
+                    <div class="stat-value" id="maxSupply">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Revenue (ETH)</div>
+                    <div class="stat-value" id="totalRevenue">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg. Mint Price</div>
+                    <div class="stat-value" id="avgMintPrice">0</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="supplyProgress">0%</div>
+            </div>
+        </div>
+
+        <!-- Minting Controls -->
+        <div class="section">
+            <h2 class="section-title">⚙️ Minting Parameters</h2>
+            
+            <!-- Pause Toggle -->
+            <div class="toggle-switch">
+                <label class="switch">
+                    <input type="checkbox" id="pauseToggle">
+                    <span class="slider"></span>
+                </label>
+                <div>
+                    <strong>Minting Status:</strong>
+                    <span id="mintingStatus">Loading...</span>
+                </div>
+            </div>
+
+            <form id="parametersForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Minimum FID</label>
+                        <input type="number" class="form-input" id="minFid" placeholder="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Maximum FID</label>
+                        <input type="number" class="form-input" id="maxFid" placeholder="100000" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Base Mint Price (ETH)</label>
+                        <input type="number" step="0.0001" class="form-input" id="baseMintPrice" placeholder="0.002" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Pro Mint Price (ETH)</label>
+                        <input type="number" step="0.0001" class="form-input" id="proMintPrice" placeholder="0.001" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Max Supply</label>
+                        <input type="number" class="form-input" id="maxSupplyInput" placeholder="10000" required>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="button">
+                        <span id="updateButtonText">💾 Update Parameters</span>
+                    </button>
+                    <button type="button" class="button button-warning" id="quickFidRangeBtn">
+                        ⚡ Quick FID Range Update
+                    </button>
+                    <button type="button" class="button button-warning" id="quickPriceBtn">
+                        💰 Quick Price Update
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="section">
+            <h2 class="section-title">⚡ Quick Actions</h2>
+            <div class="button-group">
+                <button class="button" id="earlyAdoptersBtn">
+                    🏆 Early Adopters (FID 1-10000)
+                </button>
+                <button class="button" id="proOnlyBtn">
+                    ⭐ Pro Users Only
+                </button>
+                <button class="button" id="openToAllBtn">
+                    🌍 Open to All
+                </button>
+                <button class="button button-warning" id="halfPriceBtn">
+                    🔥 Half Price Sale
+                </button>
+                <button class="button button-danger" id="pauseAllBtn">
+                    ⏸️ Emergency Pause
+                </button>
+                <button class="button" id="refreshBtn">
+                    🔄 Refresh Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="section">
+            <h2 class="section-title">📝 Recent Mints</h2>
+            <div class="recent-mints" id="recentMints">
+                <div class="alert alert-info">Loading recent activity...</div>
+            </div>
+        </div>
+
+        <!-- Pro Status Management -->
+        <div class="section">
+            <h2 class="section-title">⭐ Pro Status Management</h2>
+            <form id="proStatusForm">
+                <div class="form-group">
+                    <label class="form-label">FID</label>
+                    <input type="number" class="form-input" id="proFid" placeholder="Enter FID" required>
+                </div>
+                <div class="toggle-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="proStatusToggle">
+                        <span class="slider"></span>
+                    </label>
+                    <div><strong>Pro Status</strong></div>
+                </div>
+                <button type="submit" class="button">💎 Update Pro Status</button>
+            </form>
+        </div>
+
+        <!-- Royalty Management -->
+        <div class="section">
+            <h2 class="section-title">💰 Royalty Management (Secondary Sales)</h2>
+            <div class="alert alert-info" style="margin-bottom: 1rem;">
+                Current royalty: <strong id="currentRoyalty">6.66%</strong> (666 basis points)<br>
+                Royalty receiver: <strong id="royaltyReceiver">Loading...</strong>
+            </div>
+            <form id="royaltyForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Royalty Percentage</label>
+                        <input type="number" step="0.01" min="0" max="10" class="form-input" id="royaltyPercentage" placeholder="6.66" value="6.66">
+                        <small style="color: #00b8ff; display: block; margin-top: 0.5rem;">
+                            (Max 10%, default 6.66% - the devil's in the details 😈)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Royalty Receiver Address</label>
+                        <input type="text" class="form-input" id="royaltyReceiverAddress" placeholder="0x..." required>
+                        <small style="color: #00b8ff; display: block; margin-top: 0.5rem;">
+                            Wallet to receive royalties from secondary sales
+                        </small>
+                    </div>
+                </div>
+                <button type="submit" class="button">💎 Update Royalty Settings</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <script>
+        const API_BASE = 'https://your-domain.com/api';
+        const CONTRACT_ADDRESS = 'YOUR_CONTRACT_ADDRESS';
+
+        let currentParams = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            setupEventListeners();
+            setInterval(loadData, 30000); // Refresh every 30 seconds
+        });
+
+        function setupEventListeners() {
+            document.getElementById('parametersForm').addEventListener('submit', updateParameters);
+            document.getElementById('pauseToggle').addEventListener('change', togglePause);
+            document.getElementById('earlyAdoptersBtn').addEventListener('click', () => quickSetFidRange(1, 10000));
+            document.getElementById('proOnlyBtn').addEventListener('click', setProOnly);
+            document.getElementById('openToAllBtn').addEventListener('click', () => quickSetFidRange(1, 999999));
+            document.getElementById('halfPriceBtn').addEventListener('click', halfPriceSale);
+            document.getElementById('pauseAllBtn').addEventListener('click', emergencyPause);
+            document.getElementById('refreshBtn').addEventListener('click', loadData);
+            document.getElementById('quickFidRangeBtn').addEventListener('click', quickFidRangeDialog);
+            document.getElementById('quickPriceBtn').addEventListener('click', quickPriceDialog);
+            document.getElementById('proStatusForm').addEventListener('submit', updateProStatus);
+            document.getElementById('royaltyForm').addEventListener('submit', updateRoyalty);
+        }
+
+        async function loadData() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/stats`);
+                const data = await response.json();
+                
+                currentParams = data.parameters;
+                updateUI(data);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showAlert('Failed to load data', 'error');
+            }
+        }
+
+        function updateUI(data) {
+            // Update stats
+            document.getElementById('totalMinted').textContent = data.currentSupply || 0;
+            document.getElementById('maxSupply').textContent = data.maxSupply || 0;
+            
+            // Update progress bar
+            const percentage = (data.currentSupply / data.maxSupply * 100).toFixed(1);
+            const progressFill = document.getElementById('supplyProgress');
+            progressFill.style.width = `${percentage}%`;
+            progressFill.textContent = `${percentage}%`;
+
+            // Update form values
+            if (currentParams) {
+                document.getElementById('minFid').value = currentParams.minFid;
+                document.getElementById('maxFid').value = currentParams.maxFid;
+                document.getElementById('baseMintPrice').value = ethers.utils.formatEther(currentParams.baseMintPrice);
+                document.getElementById('proMintPrice').value = ethers.utils.formatEther(currentParams.proMintPrice);
+                document.getElementById('maxSupplyInput').value = currentParams.maxSupply;
+            }
+
+            // Update pause status
+            const pauseToggle = document.getElementById('pauseToggle');
+            const mintingStatus = document.getElementById('mintingStatus');
+            pauseToggle.checked = !data.isPaused;
+            mintingStatus.textContent = data.isPaused ? '⏸️ PAUSED' : '✅ ACTIVE';
+            mintingStatus.style.color = data.isPaused ? '#ff0000' : '#00ff9f';
+        }
+
+        async function updateParameters(e) {
+            e.preventDefault();
+            
+            const button = document.getElementById('updateButtonText');
+            const originalText = button.textContent;
+            button.innerHTML = '<span class="loading"></span> Updating...';
+
+            try {
+                const params = {
+                    minFid: document.getElementById('minFid').value,
+                    maxFid: document.getElementById('maxFid').value,
+                    baseMintPrice: document.getElementById('baseMintPrice').value,
+                    proMintPrice: document.getElementById('proMintPrice').value,
+                    maxSupply: document.getElementById('maxSupplyInput').value
+                };
+
+                const response = await fetch(`${API_BASE}/admin/update-parameters`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+
+                if (response.ok) {
+                    showAlert('Parameters updated successfully!', 'success');
+                    await loadData();
+                } else {
+                    throw new Error('Update failed');
+                }
+            } catch (error) {
+                console.error('Error updating parameters:', error);
+                showAlert('Failed to update parameters', 'error');
+            } finally {
+                button.textContent = originalText;
+            }
+        }
+
+        async function togglePause(e) {
+            try {
+                const paused = !e.target.checked;
+                const response = await fetch(`${API_BASE}/admin/update-parameters`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paused })
+                });
+
+                if (response.ok) {
+                    showAlert(paused ? 'Minting paused' : 'Minting resumed', 'success');
+                    await loadData();
+                } else {
+                    throw new Error('Toggle failed');
+                }
+            } catch (error) {
+                console.error('Error toggling pause:', error);
+                showAlert('Failed to toggle pause status', 'error');
+                e.target.checked = !e.target.checked;
+            }
+        }
+
+        async function quickSetFidRange(min, max) {
+            if (!confirm(`Set FID range to ${min}-${max}?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/update-parameters`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ minFid: min, maxFid: max })
+                });
+
+                if (response.ok) {
+                    showAlert(`FID range updated to ${min}-${max}`, 'success');
+                    await loadData();
+                }
+            } catch (error) {
+                console.error('Error updating FID range:', error);
+                showAlert('Failed to update FID range', 'error');
+            }
+        }
+
+        function quickFidRangeDialog() {
+            const min = prompt('Enter minimum FID:', currentParams.minFid);
+            const max = prompt('Enter maximum FID:', currentParams.maxFid);
+            if (min && max) {
+                quickSetFidRange(parseInt(min), parseInt(max));
+            }
+        }
+
+        async function quickPriceDialog() {
+            const base = prompt('Enter base price (ETH):', ethers.utils.formatEther(currentParams.baseMintPrice));
+            const pro = prompt('Enter pro price (ETH):', ethers.utils.formatEther(currentParams.proMintPrice));
+            
+            if (base && pro) {
+                try {
+                    const response = await fetch(`${API_BASE}/admin/update-parameters`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ baseMintPrice: base, proMintPrice: pro })
+                    });
+
+                    if (response.ok) {
+                        showAlert('Prices updated!', 'success');
+                        await loadData();
+                    }
+                } catch (error) {
+                    showAlert('Failed to update prices', 'error');
+                }
+            }
+        }
+
+        async function halfPriceSale() {
+            if (!confirm('Start 50% off sale?')) return;
+
+            const newBase = ethers.utils.formatEther(currentParams.baseMintPrice.div(2));
+            const newPro = ethers.utils.formatEther(currentParams.proMintPrice.div(2));
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/update-parameters`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ baseMintPrice: newBase, proMintPrice: newPro })
+                });
+
+                if (response.ok) {
+                    showAlert('🔥 50% OFF SALE ACTIVATED!', 'success');
+                    await loadData();
+                }
+            } catch (error) {
+                showAlert('Failed to activate sale', 'error');
+            }
+        }
+
+        function setProOnly() {
+            showAlert('Pro-only mode would be implemented via smart contract', 'info');
+        }
+
+        async function emergencyPause() {
+            if (!confirm('EMERGENCY PAUSE all minting?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/update-parameters`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paused: true })
+                });
+
+                if (response.ok) {
+                    showAlert('🛑 EMERGENCY PAUSE ACTIVATED', 'error');
+                    await loadData();
+                }
+            } catch (error) {
+                showAlert('Failed to pause', 'error');
+            }
+        }
+
+        async function updateProStatus(e) {
+            e.preventDefault();
+            
+            const fid = document.getElementById('proFid').value;
+            const isPro = document.getElementById('proStatusToggle').checked;
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/update-pro-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fid: parseInt(fid), isPro })
+                });
+
+                if (response.ok) {
+                    showAlert(`Pro status for FID ${fid} updated!`, 'success');
+                    document.getElementById('proStatusForm').reset();
+                }
+            } catch (error) {
+                showAlert('Failed to update pro status', 'error');
+            }
+        }
+
+        async function updateRoyalty(e) {
+            e.preventDefault();
+            
+            const percentage = parseFloat(document.getElementById('royaltyPercentage').value);
+            const receiver = document.getElementById('royaltyReceiverAddress').value;
+
+            if (!ethers.utils.isAddress(receiver)) {
+                showAlert('Invalid Ethereum address', 'error');
+                return;
+            }
+
+            if (percentage < 0 || percentage > 10) {
+                showAlert('Royalty must be between 0% and 10%', 'error');
+                return;
+            }
+
+            const basisPoints = Math.round(percentage * 100);
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/update-royalty`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        receiver,
+                        basisPoints
+                    })
+                });
+
+                if (response.ok) {
+                    showAlert(`Royalty updated to ${percentage}% for ${receiver}`, 'success');
+                    document.getElementById('currentRoyalty').textContent = `${percentage}%`;
+                    document.getElementById('royaltyReceiver').textContent = receiver.slice(0, 6) + '...' + receiver.slice(-4);
+                } else {
+                    throw new Error('Update failed');
+                }
+            } catch (error) {
+                console.error('Error updating royalty:', error);
+                showAlert('Failed to update royalty settings', 'error');
+            }
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            container.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

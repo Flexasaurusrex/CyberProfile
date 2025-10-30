@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberProfile - Transform Your Identity</title>
+    <meta name="description" content="Turn your Farcaster profile into a cyberpunk NFT masterpiece. AI-powered transformation. Limited supply. Mint yours now.">
+    <meta property="og:title" content="CyberProfile - Your Cyberpunk Identity Awaits">
+    <meta property="og:description" content="Transform your Farcaster PFP into a badass cyberpunk NFT">
+    <meta property="og:image" content="https://your-domain.com/og-image.png">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CyberProfile - Cyberpunk NFT Minting">
+    <meta name="twitter:description" content="Transform your identity. Mint your future.">
+    <meta name="twitter:image" content="https://your-domain.com/twitter-card.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff9f;
+            overflow-x: hidden;
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #000a1a 100%);
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 159, 0.03) 0px,
+                rgba(0, 255, 159, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .hero-content {
+            text-align: center;
+            padding: 2rem;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: clamp(3rem, 10vw, 8rem);
+            margin-bottom: 1rem;
+            text-shadow: 
+                0 0 10px #00ff9f,
+                0 0 20px #00ff9f,
+                0 0 30px #00ff9f,
+                0 0 40px #ff00ff,
+                0 0 70px #ff00ff,
+                0 0 80px #ff00ff,
+                0 0 100px #ff00ff;
+            animation: glitch 3s infinite;
+            letter-spacing: 0.1em;
+        }
+
+        @keyframes glitch {
+            0%, 90%, 100% { transform: translate(0); }
+            91% { transform: translate(-3px, 3px); }
+            92% { transform: translate(3px, -3px); }
+            93% { transform: translate(-3px, -3px); }
+            94% { transform: translate(3px, 3px); }
+        }
+
+        .tagline {
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            margin-bottom: 3rem;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1.5rem 4rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00ff9f 0%, #00b8ff 100%);
+            color: #000;
+            text-decoration: none;
+            border-radius: 50px;
+            box-shadow: 0 0 30px rgba(0, 255, 159, 0.5);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin: 1rem;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 0 50px rgba(0, 255, 159, 0.8);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 159, 0.1);
+            border: 2px solid #00ff9f;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 255, 159, 0.2);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #00ff9f;
+            text-shadow: 0 0 20px #00ff9f;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: #fff;
+            margin-top: 0.5rem;
+        }
+
+        .features {
+            max-width: 1400px;
+            margin: 6rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+        }
+
+        .feature {
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #ff00ff;
+            border-radius: 15px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 0 40px rgba(255, 0, 255, 0.4);
+        }
+
+        .feature-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #ff00ff;
+        }
+
+        .feature-desc {
+            color: #00b8ff;
+            line-height: 1.6;
+        }
+
+        .gallery {
+            max-width: 1400px;
+            margin: 6rem auto;
+            padding: 0 2rem;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .gallery-item {
+            aspect-ratio: 1;
+            border: 3px solid #00ff9f;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(0, 255, 159, 0.6);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .faq {
+            max-width: 900px;
+            margin: 6rem auto;
+            padding: 0 2rem;
+        }
+
+        .faq-item {
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #00ff9f;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .faq-question {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #00ff9f;
+            margin-bottom: 1rem;
+        }
+
+        .faq-answer {
+            color: #00b8ff;
+            line-height: 1.6;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: rgba(0, 0, 0, 0.8);
+            border-top: 2px solid #00ff9f;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .social-link {
+            color: #00ff9f;
+            text-decoration: none;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            color: #ff00ff;
+            text-shadow: 0 0 20px #ff00ff;
+        }
+
+        .countdown {
+            font-size: 2rem;
+            margin: 2rem 0;
+            color: #ff00ff;
+            text-shadow: 0 0 20px #ff00ff;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            color: #ff00ff;
+            text-shadow: 0 0 20px #ff00ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>CYBERPROFILE</h1>
+            <p class="tagline">Transform Your Identity. Mint Your Future.</p>
+            <div class="countdown" id="countdown">LAUNCHING SOON</div>
+            <a href="index.html" class="cta-button">🚀 Mint Now</a>
+            <a href="#features" class="cta-button" style="background: linear-gradient(135deg, #ff00ff 0%, #ff0080 100%);">📖 Learn More</a>
+        </div>
+    </section>
+
+    <section class="stats">
+        <div class="stat-box">
+            <div class="stat-number" id="totalMinted">0</div>
+            <div class="stat-label">NFTs Minted</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">10,000</div>
+            <div class="stat-label">Max Supply</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">0.002Ξ</div>
+            <div class="stat-label">Mint Price</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">50%</div>
+            <div class="stat-label">Pro Discount</div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <h2 style="grid-column: 1 / -1;">🎯 Features</h2>
+        
+        <div class="feature">
+            <div class="feature-icon">🎨</div>
+            <h3 class="feature-title">AI-Powered Art</h3>
+            <p class="feature-desc">
+                Your profile picture is transformed using cutting-edge AI into a stunning cyberpunk masterpiece. Each NFT is unique and generated from your identity.
+            </p>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">⚡</div>
+            <h3 class="feature-title">Farcaster Native</h3>
+            <p class="feature-desc">
+                Seamlessly integrated with Farcaster. Connect your account, and we'll handle the rest. No complex setup required.
+            </p>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">💎</div>
+            <h3 class="feature-title">Dynamic Pricing</h3>
+            <p class="feature-desc">
+                Fair pricing based on your FID and Pro status. Early adopters and Pro users get special discounts.
+            </p>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">🔐</div>
+            <h3 class="feature-title">On-Chain Forever</h3>
+            <p class="feature-desc">
+                Your CyberProfile is permanently stored on Base blockchain with metadata on IPFS. True ownership, forever.
+            </p>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">🌈</div>
+            <h3 class="feature-title">Limited Supply</h3>
+            <p class="feature-desc">
+                Only 10,000 CyberProfiles will ever exist. Each FID can mint only once. Don't miss your chance.
+            </p>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">🎯</div>
+            <h3 class="feature-title">FID Gating</h3>
+            <p class="feature-desc">
+                Dynamic eligibility based on your Farcaster ID. Parameters adjust to ensure fair access.
+            </p>
+        </div>
+    </section>
+
+    <section class="gallery">
+        <h2>✨ Gallery</h2>
+        <div class="gallery-grid">
+            <div class="gallery-item">
+                <img src="https://via.placeholder.com/400/1a0033/00ff9f?text=CyberProfile+1" alt="CyberProfile Example">
+            </div>
+            <div class="gallery-item">
+                <img src="https://via.placeholder.com/400/0a0a0a/ff00ff?text=CyberProfile+2" alt="CyberProfile Example">
+            </div>
+            <div class="gallery-item">
+                <img src="https://via.placeholder.com/400/000a1a/00b8ff?text=CyberProfile+3" alt="CyberProfile Example">
+            </div>
+        </div>
+    </section>
+
+    <section class="faq">
+        <h2>❓ FAQ</h2>
+        
+        <div class="faq-item">
+            <div class="faq-question">What is CyberProfile?</div>
+            <div class="faq-answer">
+                CyberProfile is a Farcaster-native NFT project that transforms your profile picture into a unique cyberpunk artwork using AI. Each NFT is minted on Base blockchain and permanently stored on IPFS.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">How do I mint?</div>
+            <div class="faq-answer">
+                Simply connect your Farcaster account, let our AI transform your PFP, and mint your unique CyberProfile NFT. The whole process takes less than 2 minutes.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">What's the price?</div>
+            <div class="faq-answer">
+                Base price is 0.002 ETH. Farcaster Pro users get 50% off (0.001 ETH). Pricing may adjust based on FID range eligibility.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">Can I mint multiple?</div>
+            <div class="faq-answer">
+                Each Farcaster ID can only mint once. This ensures fairness and maintains scarcity.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">What blockchain?</div>
+            <div class="faq-answer">
+                CyberProfile NFTs are minted on Base, an Ethereum L2. Fast, cheap, and secure.
+            </div>
+        </div>
+    </section>
+
+    <section class="footer">
+        <h2>🚀 Ready to Transform?</h2>
+        <a href="index.html" class="cta-button">Mint Your CyberProfile</a>
+        
+        <div class="social-links">
+            <a href="https://warpcast.com/cyberprofile" class="social-link">🟣 Warpcast</a>
+            <a href="https://twitter.com/CyberProfileNFT" class="social-link">🐦 Twitter</a>
+            <a href="https://discord.gg/cyberprofile" class="social-link">💬 Discord</a>
+        </div>
+
+        <p style="margin-top: 2rem; opacity: 0.7;">
+            Built with ❤️ for the Farcaster community
+        </p>
+    </section>
+
+    <script>
+        // Animated counter
+        function animateCount(element, target, duration = 2000) {
+            let start = 0;
+            const increment = target / (duration / 16);
+            const timer = setInterval(() => {
+                start += increment;
+                if (start >= target) {
+                    element.textContent = Math.floor(target);
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(start);
+                }
+            }, 16);
+        }
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/parameters');
+                const data = await response.json();
+                const mintedElement = document.getElementById('totalMinted');
+                animateCount(mintedElement, data.currentSupply || 0);
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Countdown timer (example - set your launch date)
+        function updateCountdown() {
+            const launchDate = new Date('2025-11-01T00:00:00Z');
+            const now = new Date();
+            const diff = launchDate - now;
+
+            if (diff > 0) {
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                document.getElementById('countdown').textContent = 
+                    `${days}D ${hours}H ${minutes}M ${seconds}S`;
+            } else {
+                document.getElementById('countdown').textContent = 'LIVE NOW!';
+            }
+        }
+
+        // Initialize
+        loadStats();
+        setInterval(loadStats, 30000);
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    </script>
+</body>
+</html>

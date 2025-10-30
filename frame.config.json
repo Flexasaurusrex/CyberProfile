@@ -1,0 +1,77 @@
+{
+  "name": "CyberProfile Minter",
+  "version": "1.0.0",
+  "description": "Transform your Farcaster profile into a cyberpunk NFT",
+  "icon": "https://your-domain.com/icon.png",
+  "splash": "https://your-domain.com/splash.png",
+  "homeUrl": "https://your-domain.com",
+  "imageUrl": "https://your-domain.com/preview.png",
+  "buttons": [
+    {
+      "label": "Transform PFP",
+      "action": "post"
+    },
+    {
+      "label": "Mint NFT",
+      "action": "tx",
+      "target": "https://your-domain.com/api/mint-tx"
+    },
+    {
+      "label": "Gallery",
+      "action": "link",
+      "target": "https://your-domain.com/gallery"
+    }
+  ],
+  "postUrl": "https://your-domain.com/api/frame-action",
+  "capabilities": {
+    "farcaster": {
+      "version": "vNext",
+      "features": [
+        "profile_access",
+        "wallet_connect",
+        "transaction_signing"
+      ]
+    }
+  },
+  "permissions": {
+    "required": [
+      "read_profile",
+      "read_fid"
+    ],
+    "optional": [
+      "pro_status"
+    ]
+  },
+  "chains": [
+    {
+      "id": 8453,
+      "name": "Base",
+      "rpc": "https://mainnet.base.org"
+    }
+  ],
+  "contract": {
+    "address": "YOUR_CONTRACT_ADDRESS",
+    "abi": "contracts/CyberProfile.json",
+    "chain": 8453
+  },
+  "metadata": {
+    "author": "Flex",
+    "category": "NFT",
+    "tags": ["nft", "profile", "cyberpunk", "art", "farcaster"],
+    "website": "https://your-domain.com",
+    "twitter": "@CyberProfileNFT",
+    "discord": "https://discord.gg/cyberprofile"
+  },
+  "pricing": {
+    "base": "0.002 ETH",
+    "pro": "0.001 ETH",
+    "currency": "ETH"
+  },
+  "features": {
+    "ai_generation": true,
+    "ipfs_storage": true,
+    "dynamic_pricing": true,
+    "fid_gating": true,
+    "pro_discount": true
+  }
+}

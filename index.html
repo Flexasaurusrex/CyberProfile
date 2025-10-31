@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CyberProfile - Mint Your Cyberpunk Identity</title>
     
-    <!-- Neynar SIWN SDK -->
-    <script src="https://neynarxyz.github.io/siwn/raw/1.2.0/index.js" defer></script>
-    
     <!-- Web3 Library -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     
@@ -108,6 +105,36 @@
         .profile-section {
             text-align: center;
             margin-bottom: 30px;
+        }
+
+        .auth-button {
+            background: linear-gradient(135deg, #8a63d2 0%, #6b46c1 100%);
+            color: white;
+            border: 2px solid #a78bfa;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: none;
+            letter-spacing: 1px;
+            width: auto;
+            margin: 20px auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(138, 99, 210, 0.4);
+        }
+
+        .auth-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(138, 99, 210, 0.6);
+        }
+
+        .auth-button svg {
+            width: 24px;
+            height: 24px;
         }
 
         .profile-image {
@@ -250,11 +277,6 @@
             display: block;
         }
 
-        /* SIWN Button Container */
-        #siwn-button {
-            margin: 20px 0;
-        }
-
         .badge {
             display: inline-block;
             padding: 5px 10px;
@@ -299,6 +321,11 @@
             font-size: 1.5em;
             font-weight: bold;
         }
+
+        .sign-out-btn {
+            background: rgba(255, 0, 0, 0.3);
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -316,8 +343,17 @@
                 <h2>🔐 Your Identity</h2>
                 
                 <div class="profile-section">
-                    <!-- Neynar SIWN Button -->
-                    <div id="siwn-button"></div>
+                    <!-- Farcaster OAuth Button -->
+                    <div id="authContainer">
+                        <button class="auth-button" id="signInBtn">
+                            <svg viewBox="0 0 1000 1000" fill="currentColor">
+                                <path d="M257.778 155.556H742.222V844.445H671.111V528.889H670.414C662.554 441.677 589.258 373.333 500 373.333C410.742 373.333 337.446 441.677 329.586 528.889H328.889V844.445H257.778V155.556Z"></path>
+                                <path d="M128.889 253.333L157.778 351.111H182.222V746.667C169.949 746.667 160 756.616 160 768.889V795.556H155.556C143.283 795.556 133.333 805.505 133.333 817.778V844.445H382.222V817.778C382.222 805.505 372.273 795.556 360 795.556H355.556V768.889C355.556 756.616 345.606 746.667 333.333 746.667H306.667V253.333H128.889Z"></path>
+                                <path d="M675.556 746.667C663.283 746.667 653.333 756.616 653.333 768.889V795.556H648.889C636.616 795.556 626.667 805.505 626.667 817.778V844.445H875.556V817.778C875.556 805.505 865.606 795.556 853.333 795.556H848.889V768.889C848.889 756.616 838.94 746.667 826.667 746.667V351.111H851.111L880 253.333H702.222V746.667H675.556Z"></path>
+                            </svg>
+                            Sign in with Farcaster
+                        </button>
+                    </div>
                     
                     <img id="profileImage" class="profile-image" alt="Profile">
                     
@@ -342,6 +378,7 @@
                             <span class="info-label">Eligible:</span>
                             <span class="info-value" id="eligible">-</span>
                         </div>
+                        <button id="signOutBtn" class="sign-out-btn" style="display:none;">Sign Out</button>
                     </div>
                 </div>
 
@@ -351,12 +388,10 @@
                         <div class="stat-value" id="totalMinted">0</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-label">Max Supply</div>
-                        <div class="stat-value" id="maxSupply">10000</div>
+                        <div class="stat-label">Limit</div>
+                        <div class="stat-value">1 per FID</div>
                     </div>
                 </div>
-
-                <button id="signOutBtn" style="display:none; background: rgba(255,0,0,0.3);">Sign Out</button>
             </div>
 
             <!-- Right Column: Transform & Mint -->
@@ -387,76 +422,104 @@
         // Configuration
         const API_BASE = 'https://cyberprofile-production.up.railway.app/api';
         const NEYNAR_CLIENT_ID = 'YOUR_NEYNAR_CLIENT_ID'; // Get from Neynar dashboard
+        const CALLBACK_URL = window.location.origin;
         
         // State
         let currentUser = null;
         let transformedImageUrl = null;
         let tokenURI = null;
 
-        // Initialize SIWN
+        // Initialize
         window.onload = async function() {
             // Load minting parameters
             await loadMintingParameters();
             
-            // Initialize Neynar SIWN Button
-            const siwn = new window.NeynarSignIn({
-                client_id: NEYNAR_CLIENT_ID,
-                callback_url: window.location.origin,
-                api_url: 'https://api.neynar.com'
-            });
-
-            siwn.addEventListener('auth', async (event) => {
-                const { fid, username, display_name, pfp_url, signer_uuid } = event.detail;
-                console.log('Auth success:', event.detail);
-                
-                // Store user data
-                currentUser = {
-                    fid: fid,
-                    username: username,
-                    displayName: display_name,
-                    profileImage: pfp_url,
-                    signerUuid: signer_uuid
-                };
-                
-                // Update UI
-                await handleAuthSuccess();
-            });
-
-            siwn.addEventListener('logout', () => {
-                console.log('User logged out');
-                currentUser = null;
-                updateUIForLogout();
-            });
-
-            siwn.mount('siwn-button');
+            // Check if returning from OAuth
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            
+            if (code && state) {
+                // OAuth callback - exchange code for user data
+                await handleOAuthCallback(code, state);
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            // Setup event listeners
+            document.getElementById('signInBtn').addEventListener('click', initiateOAuth);
+            document.getElementById('transformBtn').addEventListener('click', handleTransform);
+            document.getElementById('mintBtn').addEventListener('click', handleMint);
+            document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
         };
 
-        async function handleAuthSuccess() {
+        function initiateOAuth() {
+            // Generate random state for CSRF protection
+            const state = Math.random().toString(36).substring(7);
+            sessionStorage.setItem('oauth_state', state);
+            
+            // Build Neynar OAuth URL
+            const authUrl = new URL('https://app.neynar.com/api/siwn/authorize');
+            authUrl.searchParams.append('client_id', NEYNAR_CLIENT_ID);
+            authUrl.searchParams.append('redirect_uri', CALLBACK_URL);
+            authUrl.searchParams.append('response_type', 'code');
+            authUrl.searchParams.append('state', state);
+            
+            // Redirect to Neynar
+            window.location.href = authUrl.toString();
+        }
+
+        async function handleOAuthCallback(code, state) {
+            // Verify state
+            const savedState = sessionStorage.getItem('oauth_state');
+            if (state !== savedState) {
+                showError('Invalid OAuth state. Please try again.');
+                return;
+            }
+            
+            showLoading('Signing in with Farcaster...');
+            
             try {
-                // Fetch full user data from our backend
-                const response = await fetch(`${API_BASE}/user/${currentUser.fid}`);
-                const userData = await response.json();
+                // Exchange code for user data via backend
+                const response = await fetch(`${API_BASE}/auth/callback`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        redirect_uri: CALLBACK_URL
+                    })
+                });
+                
+                const data = await response.json();
                 
                 if (!response.ok) {
-                    throw new Error(userData.error || 'Failed to fetch user data');
+                    throw new Error(data.error || 'Authentication failed');
                 }
                 
-                // Update current user with backend data
-                currentUser = {
-                    ...currentUser,
-                    ...userData
-                };
+                // Store user data
+                currentUser = data.user;
                 
                 // Update UI
                 updateUIForLogin();
                 
+                hideLoading();
+                showSuccess(`Welcome, @${data.user.username}!`);
+                
             } catch (error) {
-                console.error('Error loading user data:', error);
-                showError('Failed to load user data: ' + error.message);
+                console.error('OAuth callback error:', error);
+                hideLoading();
+                showError('Sign in failed: ' + error.message);
             }
+            
+            sessionStorage.removeItem('oauth_state');
         }
 
         function updateUIForLogin() {
+            // Hide auth button
+            document.getElementById('authContainer').style.display = 'none';
+            
             // Show profile image
             const profileImg = document.getElementById('profileImage');
             profileImg.src = currentUser.profileImage;
@@ -482,20 +545,23 @@
             document.getElementById('signOutBtn').style.display = 'block';
         }
 
-        function updateUIForLogout() {
-            // Hide profile elements
+        function handleSignOut() {
+            // Reset state
+            currentUser = null;
+            transformedImageUrl = null;
+            tokenURI = null;
+            
+            // Reset UI
+            document.getElementById('authContainer').style.display = 'block';
             document.getElementById('profileImage').classList.remove('show');
             document.getElementById('userInfo').classList.remove('show');
             document.getElementById('previewImage').classList.remove('show');
-            
-            // Reset buttons
             document.getElementById('transformBtn').disabled = true;
             document.getElementById('mintBtn').style.display = 'none';
             document.getElementById('signOutBtn').style.display = 'none';
             
-            // Clear data
-            transformedImageUrl = null;
-            tokenURI = null;
+            hideError();
+            hideSuccess();
         }
 
         async function loadMintingParameters() {
@@ -503,15 +569,13 @@
                 const response = await fetch(`${API_BASE}/parameters`);
                 const params = await response.json();
                 
-                document.getElementById('maxSupply').textContent = params.maxSupply;
                 document.getElementById('totalMinted').textContent = params.currentSupply;
             } catch (error) {
                 console.error('Error loading parameters:', error);
             }
         }
 
-        // Transform button handler
-        document.getElementById('transformBtn').addEventListener('click', async () => {
+        async function handleTransform() {
             if (!currentUser) {
                 showError('Please sign in first!');
                 return;
@@ -556,10 +620,9 @@
                 hideLoading();
                 showError('Transform failed: ' + error.message);
             }
-        });
+        }
 
-        // Mint button handler
-        document.getElementById('mintBtn').addEventListener('click', async () => {
+        async function handleMint() {
             if (!currentUser || !transformedImageUrl) {
                 showError('Please transform your profile first!');
                 return;
@@ -602,7 +665,7 @@
                 hideLoading();
                 showError('Mint failed: ' + error.message);
             }
-        });
+        }
 
         async function mintNFT() {
             try {
@@ -673,14 +736,6 @@
                 showError('Mint transaction failed: ' + error.message);
             }
         }
-
-        // Sign out button
-        document.getElementById('signOutBtn').addEventListener('click', () => {
-            if (window.NeynarSignIn) {
-                // Trigger logout
-                window.location.reload();
-            }
-        });
 
         // Utility functions
         function showLoading(text) {

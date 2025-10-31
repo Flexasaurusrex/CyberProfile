@@ -405,7 +405,7 @@
         </p>
     </div>
 
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <script>
         // Configuration
         const API_BASE = 'https://cyberprofile-production.up.railway.app/api';
@@ -416,6 +416,8 @@
         let userFid = null;
         let userAddress = null;
         let isPro = false;
+        let username = null;
+        let displayName = null;
         let transformedImageUrl = null;
         let mintingParameters = null;
 
@@ -455,9 +457,9 @@
             document.getElementById('proDiscount').textContent = 
                 `${params.proDiscountPercent}%`;
             document.getElementById('baseMintPrice').textContent = 
-                `${ethers.utils.formatEther(params.baseMintPrice)} ETH`;
+                `${params.baseMintPrice} ETH`;
             document.getElementById('proMintPrice').textContent = 
-                `${ethers.utils.formatEther(params.proMintPrice)} ETH`;
+                `${params.proMintPrice} ETH`;
             document.getElementById('maxSupply').textContent = 
                 `${params.currentSupply}/${params.maxSupply}`;
             
@@ -466,14 +468,33 @@
 
         async function connectFarcaster() {
             try {
-                // In production, use Farcaster Auth Kit
-                // For now, simulate connection
-                const response = await fetch(`${API_BASE}/auth/farcaster`);
+                // Prompt user for their Farcaster ID
+                const fidInput = prompt('Enter your Farcaster ID (FID):');
+                
+                if (!fidInput) {
+                    return;
+                }
+                
+                const fid = parseInt(fidInput);
+                
+                if (isNaN(fid) || fid < 1) {
+                    alert('Please enter a valid FID number');
+                    return;
+                }
+                
+                // Fetch user data from backend
+                const response = await fetch(`${API_BASE}/user/${fid}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
                 const userData = await response.json();
                 
                 userFid = userData.fid;
-                userAddress = userData.address;
                 isPro = userData.isPro;
+                username = userData.username;
+                displayName = userData.displayName;
                 
                 // Update UI
                 document.getElementById('originalImage').src = userData.profileImage;
@@ -482,12 +503,18 @@
                     isPro ? '⭐ PRO' : '👤 FREE';
                 
                 // Calculate and show mint cost
-                const mintPrice = await getMintPrice(userFid, isPro);
+                const mintPrice = userData.mintPrice;
                 document.getElementById('mintCost').textContent = 
-                    `${ethers.utils.formatEther(mintPrice)} ETH`;
+                    `${mintPrice} ETH`;
                 
                 // Check eligibility
-                checkEligibility(userFid);
+                if (userData.isEligible) {
+                    document.getElementById('eligibility').innerHTML = 
+                        '<span style="color: #00ff9f;">✅ Eligible to mint</span>';
+                } else {
+                    document.getElementById('eligibility').innerHTML = 
+                        '<span style="color: #ff00ff;">❌ Not eligible</span>';
+                }
                 
                 // Enable transform button
                 document.getElementById('transformBtn').disabled = false;
@@ -514,21 +541,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         fid: userFid,
-                        profileImageUrl: document.getElementById('originalImage').src,
-                        style: 'cyberpunk'
+                        imageUrl: document.getElementById('originalImage').src
                     })
                 });
                 
+                if (!response.ok) {
+                    throw new Error('Transformation failed');
+                }
+                
                 const result = await response.json();
-                transformedImageUrl = result.transformedImageUrl;
+                transformedImageUrl = result.transformedUrl;
                 
                 // Update image
                 document.getElementById('transformedImage').src = transformedImageUrl;
                 
-                // Enable mint button if eligible
-                if (result.isEligible) {
-                    document.getElementById('mintBtn').disabled = false;
-                }
+                // Enable mint button
+                document.getElementById('mintBtn').disabled = false;
                 
             } catch (error) {
                 console.error('Transformation error:', error);
@@ -585,14 +613,15 @@
                 await provider.send("eth_requestAccounts", []);
                 const signer = provider.getSigner();
                 
-                // Upload to IPFS
-                const metadataResponse = await fetch(`${API_BASE}/prepare-metadata`, {
+                // Prepare mint (upload to IPFS and create metadata)
+                const metadataResponse = await fetch(`${API_BASE}/prepare-mint`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         imageUrl: transformedImageUrl,
                         fid: userFid,
-                        originalImage: document.getElementById('originalImage').src
+                        username: username,
+                        displayName: displayName
                     })
                 });
                 

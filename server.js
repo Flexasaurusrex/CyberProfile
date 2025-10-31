@@ -262,6 +262,13 @@ async function uploadMetadataToIPFS(metadata) {
 // ===== API ROUTES =====
 
 /**
+ * Health check
+ */
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+/**
  * Get current minting parameters
  */
 app.get('/api/parameters', async (req, res) => {
@@ -270,6 +277,40 @@ app.get('/api/parameters', async (req, res) => {
             ...mintingParameters,
             baseMintPrice: mintingParameters.baseMintPrice.toString(),
             proMintPrice: mintingParameters.proMintPrice.toString()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Get user profile and eligibility
+ */
+app.get('/api/user/:fid', async (req, res) => {
+    try {
+        const fid = parseInt(req.params.fid);
+        const userData = await getFarcasterUser(fid);
+        
+        const isEligible = fid >= mintingParameters.minFid && 
+                          fid <= mintingParameters.maxFid &&
+                          mintingParameters.currentSupply < mintingParameters.maxSupply &&
+                          !mintingParameters.paused;
+        
+        const mintPrice = userData.isPro ? 
+            mintingParameters.proMintPrice : 
+            mintingParameters.baseMintPrice;
+        
+        res.json({
+            ...userData,
+            isEligible,
+            mintPrice: ethers.utils.formatEther(mintPrice),
+            parameters: {
+                minFid: mintingParameters.minFid,
+                maxFid: mintingParameters.maxFid,
+                maxSupply: mintingParameters.maxSupply,
+                currentSupply: mintingParameters.currentSupply,
+                paused: mintingParameters.paused
+            }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -304,9 +345,9 @@ app.post('/api/auth/farcaster', async (req, res) => {
  */
 app.post('/api/transform', async (req, res) => {
     try {
-        const { fid, profileImageUrl, style } = req.body;
+        const { fid, imageUrl } = req.body;
 
-        if (!fid || !profileImageUrl) {
+        if (!fid || !imageUrl) {
             return res.status(400).json({ error: 'Missing required parameters' });
         }
 
@@ -324,10 +365,11 @@ app.post('/api/transform', async (req, res) => {
         }
 
         // Transform the image
-        const transformedImageUrl = await transformToCyberpunk(profileImageUrl, fid);
+        const transformedUrl = await transformToCyberpunk(imageUrl, fid);
 
         res.json({
-            transformedImageUrl,
+            success: true,
+            transformedUrl,
             isEligible: true,
             fid
         });
@@ -369,51 +411,51 @@ app.get('/api/check-eligibility/:fid', async (req, res) => {
 });
 
 /**
- * Prepare NFT metadata for minting
+ * Prepare mint (transform + upload to IPFS)
  */
-app.post('/api/prepare-metadata', async (req, res) => {
+app.post('/api/prepare-mint', async (req, res) => {
     try {
-        const { imageUrl, fid, originalImage } = req.body;
+        const { imageUrl, fid, username, displayName } = req.body;
 
         // Upload transformed image to IPFS
-        const ipfsImageUri = await uploadToIPFS(imageUrl);
+        const ipfsImageUrl = await uploadToIPFS(imageUrl);
 
         // Create metadata
         const metadata = {
             name: `CyberProfile #${fid}`,
-            description: `A unique cyberpunk transformation of Farcaster user ${fid}'s profile picture. This NFT represents their digital identity in the metaverse.`,
-            image: ipfsImageUri,
+            description: `Cyberpunk transformation of @${username}'s Farcaster profile`,
+            image: ipfsImageUrl,
             attributes: [
                 {
-                    trait_type: 'Farcaster ID',
+                    trait_type: "FID",
                     value: fid
                 },
                 {
-                    trait_type: 'Generation',
-                    value: 'AI Cyberpunk'
+                    trait_type: "Username",
+                    value: username
                 },
                 {
-                    trait_type: 'Original PFP',
-                    value: originalImage
+                    trait_type: "Display Name",
+                    value: displayName
                 },
                 {
-                    trait_type: 'Transformation Date',
-                    value: new Date().toISOString()
+                    trait_type: "Style",
+                    value: "Cyberpunk"
                 }
-            ],
-            external_url: `https://warpcast.com/~/profiles/${fid}`,
-            background_color: '0a0a0a'
+            ]
         };
 
         // Upload metadata to IPFS
         const tokenURI = await uploadMetadataToIPFS(metadata);
 
         res.json({
+            success: true,
             tokenURI,
+            ipfsImageUrl,
             metadata
         });
     } catch (error) {
-        console.error('Metadata preparation error:', error);
+        console.error('Prepare mint error:', error);
         res.status(500).json({ error: error.message });
     }
 });

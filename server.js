@@ -12,7 +12,16 @@ const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: [
+        'https://cyber-profile-seven.vercel.app',
+        'http://localhost:3000',
+        'https://cyberprofile-production.up.railway.app'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -66,7 +75,7 @@ async function getFarcasterUser(fid) {
             username: user.username,
             displayName: user.display_name,
             profileImage: user.pfp_url,
-            isPro: user.power_badge || false,
+            isPro: user.power_badge || false, // Farcaster Power Badge indicates Pro
             custodyAddress: user.custody_address,
             verifications: user.verifications
         };
@@ -104,7 +113,7 @@ async function verifyFarcasterSignature(message, signature, fid) {
     }
 }
 
-// ===== AI IMAGE TRANSFORMATION =====
+// ===== IMAGE TRANSFORMATION =====
 
 /**
  * Transform profile picture using Together.ai API
@@ -148,6 +157,46 @@ async function transformToCyberpunk(imageUrl, fid) {
     } catch (error) {
         console.error('Error transforming image with Together.ai:', error.response?.data || error.message);
         throw new Error('Failed to transform image');
+    }
+}
+
+/**
+ * Alternative: Use Stability AI
+ */
+async function transformWithStability(imageUrl, fid) {
+    try {
+        // Download original image
+        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const imageBuffer = Buffer.from(imageResponse.data);
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('init_image', imageBuffer, 'image.png');
+        formData.append('init_image_mode', 'IMAGE_STRENGTH');
+        formData.append('image_strength', 0.35);
+        formData.append('text_prompts[0][text]', 'cyberpunk futuristic neon portrait, highly detailed digital art, neon colors, holographic, chrome, dystopian, 8k');
+        formData.append('text_prompts[0][weight]', 1);
+        formData.append('cfg_scale', 7);
+        formData.append('samples', 1);
+        formData.append('steps', 30);
+
+        const response = await axios.post(
+            'https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/image-to-image',
+            formData,
+            {
+                headers: {
+                    ...formData.getHeaders(),
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${process.env.STABILITY_API_KEY}`
+                }
+            }
+        );
+
+        const transformedBase64 = response.data.artifacts[0].base64;
+        return `data:image/png;base64,${transformedBase64}`;
+    } catch (error) {
+        console.error('Error with Stability AI:', error);
+        throw error;
     }
 }
 
@@ -196,9 +245,9 @@ async function uploadMetadataToIPFS(metadata) {
             metadata,
             {
                 headers: {
+                    'Content-Type': 'application/json',
                     'pinata_api_key': PINATA_API_KEY,
-                    'pinata_secret_api_key': PINATA_SECRET,
-                    'Content-Type': 'application/json'
+                    'pinata_secret_api_key': PINATA_SECRET
                 }
             }
         );
@@ -213,42 +262,39 @@ async function uploadMetadataToIPFS(metadata) {
 // ===== API ROUTES =====
 
 /**
- * Health check
+ * Get current minting parameters
  */
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/parameters', async (req, res) => {
+    try {
+        res.json({
+            ...mintingParameters,
+            baseMintPrice: mintingParameters.baseMintPrice.toString(),
+            proMintPrice: mintingParameters.proMintPrice.toString()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 /**
- * Get user profile and eligibility
+ * Authenticate Farcaster user
  */
-app.get('/api/user/:fid', async (req, res) => {
+app.post('/api/auth/farcaster', async (req, res) => {
     try {
-        const fid = parseInt(req.params.fid);
+        const { fid, signature, message } = req.body;
+        
+        // Verify signature
+        const isValid = await verifyFarcasterSignature(message, signature, fid);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Invalid signature' });
+        }
+
+        // Get user data
         const userData = await getFarcasterUser(fid);
         
-        const isEligible = fid >= mintingParameters.minFid && 
-                          fid <= mintingParameters.maxFid &&
-                          mintingParameters.currentSupply < mintingParameters.maxSupply &&
-                          !mintingParameters.paused;
-        
-        const mintPrice = userData.isPro ? 
-            mintingParameters.proMintPrice : 
-            mintingParameters.baseMintPrice;
-        
-        res.json({
-            ...userData,
-            isEligible,
-            mintPrice: ethers.utils.formatEther(mintPrice),
-            parameters: {
-                minFid: mintingParameters.minFid,
-                maxFid: mintingParameters.maxFid,
-                maxSupply: mintingParameters.maxSupply,
-                currentSupply: mintingParameters.currentSupply,
-                paused: mintingParameters.paused
-            }
-        });
+        res.json(userData);
     } catch (error) {
+        console.error('Auth error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -258,18 +304,64 @@ app.get('/api/user/:fid', async (req, res) => {
  */
 app.post('/api/transform', async (req, res) => {
     try {
-        const { imageUrl, fid } = req.body;
-        
-        if (!imageUrl || !fid) {
-            return res.status(400).json({ error: 'Missing imageUrl or fid' });
+        const { fid, profileImageUrl, style } = req.body;
+
+        if (!fid || !profileImageUrl) {
+            return res.status(400).json({ error: 'Missing required parameters' });
         }
+
+        // Check eligibility
+        const isEligible = fid >= mintingParameters.minFid && 
+                          fid <= mintingParameters.maxFid &&
+                          !mintingParameters.paused;
+
+        if (!isEligible) {
+            return res.status(403).json({ 
+                error: 'Not eligible to mint',
+                isEligible: false,
+                reason: 'FID out of range or minting paused'
+            });
+        }
+
+        // Transform the image
+        const transformedImageUrl = await transformToCyberpunk(profileImageUrl, fid);
+
+        res.json({
+            transformedImageUrl,
+            isEligible: true,
+            fid
+        });
+    } catch (error) {
+        console.error('Transform error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Check eligibility for minting
+ */
+app.get('/api/check-eligibility/:fid', async (req, res) => {
+    try {
+        const fid = parseInt(req.params.fid);
         
-        const transformedUrl = await transformToCyberpunk(imageUrl, fid);
-        
-        res.json({ 
-            success: true,
-            transformedUrl,
-            message: 'Image transformed successfully'
+        const isEligible = fid >= mintingParameters.minFid && 
+                          fid <= mintingParameters.maxFid &&
+                          mintingParameters.currentSupply < mintingParameters.maxSupply &&
+                          !mintingParameters.paused;
+
+        let reason = '';
+        if (fid < mintingParameters.minFid || fid > mintingParameters.maxFid) {
+            reason = `FID must be between ${mintingParameters.minFid} and ${mintingParameters.maxFid}`;
+        } else if (mintingParameters.currentSupply >= mintingParameters.maxSupply) {
+            reason = 'Max supply reached';
+        } else if (mintingParameters.paused) {
+            reason = 'Minting is currently paused';
+        }
+
+        res.json({
+            isEligible,
+            reason,
+            fid
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -277,52 +369,86 @@ app.post('/api/transform', async (req, res) => {
 });
 
 /**
- * Prepare mint (transform + upload to IPFS)
+ * Prepare NFT metadata for minting
  */
-app.post('/api/prepare-mint', async (req, res) => {
+app.post('/api/prepare-metadata', async (req, res) => {
     try {
-        const { imageUrl, fid, username, displayName } = req.body;
-        
-        // Transform the image
-        const transformedUrl = await transformToCyberpunk(imageUrl, fid);
-        
+        const { imageUrl, fid, originalImage } = req.body;
+
         // Upload transformed image to IPFS
-        const ipfsImageUrl = await uploadToIPFS(transformedUrl);
-        
+        const ipfsImageUri = await uploadToIPFS(imageUrl);
+
         // Create metadata
         const metadata = {
             name: `CyberProfile #${fid}`,
-            description: `Cyberpunk transformation of @${username}'s Farcaster profile`,
-            image: ipfsImageUrl,
+            description: `A unique cyberpunk transformation of Farcaster user ${fid}'s profile picture. This NFT represents their digital identity in the metaverse.`,
+            image: ipfsImageUri,
             attributes: [
                 {
-                    trait_type: "FID",
+                    trait_type: 'Farcaster ID',
                     value: fid
                 },
                 {
-                    trait_type: "Username",
-                    value: username
+                    trait_type: 'Generation',
+                    value: 'AI Cyberpunk'
                 },
                 {
-                    trait_type: "Display Name",
-                    value: displayName
+                    trait_type: 'Original PFP',
+                    value: originalImage
                 },
                 {
-                    trait_type: "Style",
-                    value: "Cyberpunk"
+                    trait_type: 'Transformation Date',
+                    value: new Date().toISOString()
                 }
-            ]
+            ],
+            external_url: `https://warpcast.com/~/profiles/${fid}`,
+            background_color: '0a0a0a'
         };
-        
+
         // Upload metadata to IPFS
         const tokenURI = await uploadMetadataToIPFS(metadata);
-        
+
+        res.json({
+            tokenURI,
+            metadata
+        });
+    } catch (error) {
+        console.error('Metadata preparation error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===== ADMIN ROUTES (Protected in production) =====
+
+/**
+ * Update minting parameters
+ */
+app.post('/api/admin/update-parameters', async (req, res) => {
+    try {
+        // In production, add authentication middleware
+        const { minFid, maxFid, baseMintPrice, proMintPrice, maxSupply, paused } = req.body;
+
+        if (minFid !== undefined) mintingParameters.minFid = parseInt(minFid);
+        if (maxFid !== undefined) mintingParameters.maxFid = parseInt(maxFid);
+        if (baseMintPrice !== undefined) {
+            mintingParameters.baseMintPrice = ethers.utils.parseEther(baseMintPrice);
+        }
+        if (proMintPrice !== undefined) {
+            mintingParameters.proMintPrice = ethers.utils.parseEther(proMintPrice);
+            mintingParameters.proDiscountPercent = Math.round(
+                (1 - parseFloat(proMintPrice) / parseFloat(baseMintPrice)) * 100
+            );
+        }
+        if (maxSupply !== undefined) mintingParameters.maxSupply = parseInt(maxSupply);
+        if (paused !== undefined) mintingParameters.paused = Boolean(paused);
+
         res.json({
             success: true,
-            tokenURI,
-            ipfsImageUrl,
-            transformedUrl,
-            metadata
+            parameters: {
+                ...mintingParameters,
+                baseMintPrice: mintingParameters.baseMintPrice.toString(),
+                proMintPrice: mintingParameters.proMintPrice.toString()
+            }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -330,87 +456,89 @@ app.post('/api/prepare-mint', async (req, res) => {
 });
 
 /**
- * Get current minting parameters
- */
-app.get('/api/parameters', (req, res) => {
-    res.json({
-        ...mintingParameters,
-        baseMintPrice: ethers.utils.formatEther(mintingParameters.baseMintPrice),
-        proMintPrice: ethers.utils.formatEther(mintingParameters.proMintPrice)
-    });
-});
-
-/**
- * Get stats for admin dashboard
+ * Get admin stats
  */
 app.get('/api/admin/stats', async (req, res) => {
     try {
         res.json({
+            totalTransformations: transformCache.size,
             currentSupply: mintingParameters.currentSupply,
             maxSupply: mintingParameters.maxSupply,
             isPaused: mintingParameters.paused,
-            parameters: {
-                ...mintingParameters,
-                baseMintPrice: ethers.utils.formatEther(mintingParameters.baseMintPrice),
-                proMintPrice: ethers.utils.formatEther(mintingParameters.proMintPrice)
-            }
+            parameters: mintingParameters
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
+// ===== FARCASTER FRAME HANDLER =====
+
 /**
- * Update minting parameters (admin only)
+ * Handle Frame actions
  */
-app.post('/api/admin/update-parameters', (req, res) => {
+app.post('/api/frame-action', async (req, res) => {
     try {
-        const { minFid, maxFid, baseMintPrice, proMintPrice, maxSupply } = req.body;
-        
-        if (minFid !== undefined) mintingParameters.minFid = parseInt(minFid);
-        if (maxFid !== undefined) mintingParameters.maxFid = parseInt(maxFid);
-        if (baseMintPrice !== undefined) mintingParameters.baseMintPrice = ethers.utils.parseEther(baseMintPrice.toString());
-        if (proMintPrice !== undefined) mintingParameters.proMintPrice = ethers.utils.parseEther(proMintPrice.toString());
-        if (maxSupply !== undefined) mintingParameters.maxSupply = parseInt(maxSupply);
-        
-        res.json({ 
-            success: true, 
-            parameters: {
-                ...mintingParameters,
-                baseMintPrice: ethers.utils.formatEther(mintingParameters.baseMintPrice),
-                proMintPrice: ethers.utils.formatEther(mintingParameters.proMintPrice)
-            }
+        const { untrustedData, trustedData } = req.body;
+        const fid = untrustedData.fid;
+        const buttonIndex = untrustedData.buttonIndex;
+
+        // Get user data
+        const userData = await getFarcasterUser(fid);
+
+        let imageUrl = '';
+        let buttons = [];
+
+        switch (buttonIndex) {
+            case 1: // Transform PFP
+                const transformedUrl = await transformToCyberpunk(userData.profileImage, fid);
+                imageUrl = transformedUrl;
+                buttons = [
+                    { label: '💎 Mint NFT', action: 'post' },
+                    { label: '🔄 Try Again', action: 'post' },
+                    { label: '📊 Stats', action: 'post' }
+                ];
+                break;
+
+            case 2: // Mint NFT
+                imageUrl = `https://your-domain.com/api/generate-mint-confirmation/${fid}`;
+                buttons = [
+                    { label: '✅ Confirm Mint', action: 'tx', target: `${CONTRACT_ADDRESS}/mint` },
+                    { label: '↩️ Back', action: 'post' }
+                ];
+                break;
+
+            case 3: // Check Eligibility
+                const eligibility = await checkEligibility(fid);
+                imageUrl = `https://your-domain.com/api/generate-eligibility-image/${fid}`;
+                buttons = [
+                    { label: '🔮 Transform', action: 'post' },
+                    { label: '📈 View Parameters', action: 'post' }
+                ];
+                break;
+
+            default:
+                imageUrl = 'https://your-domain.com/api/generate-preview';
+                buttons = [
+                    { label: '🔮 Transform My PFP', action: 'post' },
+                    { label: '💎 Mint NFT', action: 'post' },
+                    { label: '📊 Check Eligibility', action: 'post' }
+                ];
+        }
+
+        // Return Frame response
+        res.json({
+            image: imageUrl,
+            buttons: buttons
         });
     } catch (error) {
+        console.error('Frame action error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-/**
- * Toggle pause state
- */
-app.post('/api/admin/toggle-pause', (req, res) => {
-    mintingParameters.paused = !mintingParameters.paused;
-    res.json({ 
-        success: true, 
-        paused: mintingParameters.paused 
-    });
-});
+// ===== START SERVER =====
 
-/**
- * Update Pro status for a FID
- */
-app.post('/api/admin/update-pro-status', (req, res) => {
-    try {
-        const { fid, isPro } = req.body;
-        // In production, this would update a database
-        res.json({ success: true, fid, isPro });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Start server
 app.listen(PORT, () => {
     console.log(`🚀 CyberProfile API running on port ${PORT}`);
     console.log(`📡 Farcaster integration: ${NEYNAR_API_KEY ? '✅' : '❌'}`);

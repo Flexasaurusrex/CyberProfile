@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CyberProfile - Mint Your Cyberpunk Identity</title>
     
+    <!-- Neynar AuthKit -->
+    <script src="https://unpkg.com/@farcaster/auth-kit@0.3.4/dist/auth-kit.umd.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@farcaster/auth-kit@0.3.4/dist/auth-kit.css">
+    
     <!-- Web3 Library -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     
@@ -107,34 +111,10 @@
             margin-bottom: 30px;
         }
 
-        .auth-button {
-            background: linear-gradient(135deg, #8a63d2 0%, #6b46c1 100%);
-            color: white;
-            border: 2px solid #a78bfa;
-            padding: 15px 40px;
-            font-size: 1.2em;
-            font-weight: bold;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: none;
-            letter-spacing: 1px;
-            width: auto;
-            margin: 20px auto;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 15px rgba(138, 99, 210, 0.4);
-        }
-
-        .auth-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(138, 99, 210, 0.6);
-        }
-
-        .auth-button svg {
-            width: 24px;
-            height: 24px;
+        #authkit-container {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
         }
 
         .profile-image {
@@ -343,17 +323,8 @@
                 <h2>🔐 Your Identity</h2>
                 
                 <div class="profile-section">
-                    <!-- Farcaster OAuth Button -->
-                    <div id="authContainer">
-                        <button class="auth-button" id="signInBtn">
-                            <svg viewBox="0 0 1000 1000" fill="currentColor">
-                                <path d="M257.778 155.556H742.222V844.445H671.111V528.889H670.414C662.554 441.677 589.258 373.333 500 373.333C410.742 373.333 337.446 441.677 329.586 528.889H328.889V844.445H257.778V155.556Z"></path>
-                                <path d="M128.889 253.333L157.778 351.111H182.222V746.667C169.949 746.667 160 756.616 160 768.889V795.556H155.556C143.283 795.556 133.333 805.505 133.333 817.778V844.445H382.222V817.778C382.222 805.505 372.273 795.556 360 795.556H355.556V768.889C355.556 756.616 345.606 746.667 333.333 746.667H306.667V253.333H128.889Z"></path>
-                                <path d="M675.556 746.667C663.283 746.667 653.333 756.616 653.333 768.889V795.556H648.889C636.616 795.556 626.667 805.505 626.667 817.778V844.445H875.556V817.778C875.556 805.505 865.606 795.556 853.333 795.556H848.889V768.889C848.889 756.616 838.94 746.667 826.667 746.667V351.111H851.111L880 253.333H702.222V746.667H675.556Z"></path>
-                            </svg>
-                            Sign in with Farcaster
-                        </button>
-                    </div>
+                    <!-- Farcaster AuthKit Button -->
+                    <div id="authkit-container"></div>
                     
                     <img id="profileImage" class="profile-image" alt="Profile">
                     
@@ -421,111 +392,87 @@
     <script>
         // Configuration
         const API_BASE = 'https://cyberprofile-production.up.railway.app/api';
-        const NEYNAR_CLIENT_ID = '42a95572-5687-48ca-b592-1633aa432b8f'; // Get from Neynar dashboard
-        const CALLBACK_URL = window.location.origin;
         
         // State
         let currentUser = null;
         let transformedImageUrl = null;
         let tokenURI = null;
+        let authKit = null;
 
         // Initialize
         window.onload = async function() {
-            // Load minting parameters
             await loadMintingParameters();
             
-            // Check if returning from OAuth
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            const state = urlParams.get('state');
-            
-            if (code && state) {
-                // OAuth callback - exchange code for user data
-                await handleOAuthCallback(code, state);
-                // Clean URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
+            // Initialize Farcaster AuthKit
+            authKit = new window.AuthKit({
+                rpcUrl: 'https://mainnet.optimism.io',
+                domain: 'cyber-profile-seven.vercel.app',
+                siweUri: 'https://cyber-profile-seven.vercel.app',
+                relay: 'https://relay.farcaster.xyz',
+            });
+
+            authKit.on('signIn', async (data) => {
+                console.log('Sign in successful:', data);
+                await handleSignIn(data);
+            });
+
+            authKit.on('signOut', () => {
+                console.log('Sign out');
+                handleSignOut();
+            });
+
+            authKit.on('error', (error) => {
+                console.error('AuthKit error:', error);
+                showError('Authentication error: ' + error.message);
+            });
+
+            // Render sign-in button
+            authKit.mount('#authkit-container');
             
             // Setup event listeners
-            document.getElementById('signInBtn').addEventListener('click', initiateOAuth);
             document.getElementById('transformBtn').addEventListener('click', handleTransform);
             document.getElementById('mintBtn').addEventListener('click', handleMint);
-            document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
+            document.getElementById('signOutBtn').addEventListener('click', () => {
+                authKit.signOut();
+            });
         };
 
-        function initiateOAuth() {
-            // Generate random state for CSRF protection
-            const state = Math.random().toString(36).substring(7);
-            sessionStorage.setItem('oauth_state', state);
-            
-            // Build Neynar OAuth URL
-            const authUrl = new URL('https://app.neynar.com/api/siwn/authorize');
-            authUrl.searchParams.append('client_id', NEYNAR_CLIENT_ID);
-            authUrl.searchParams.append('redirect_uri', CALLBACK_URL);
-            authUrl.searchParams.append('response_type', 'code');
-            authUrl.searchParams.append('state', state);
-            
-            // Redirect to Neynar
-            window.location.href = authUrl.toString();
-        }
-
-        async function handleOAuthCallback(code, state) {
-            // Verify state
-            const savedState = sessionStorage.getItem('oauth_state');
-            if (state !== savedState) {
-                showError('Invalid OAuth state. Please try again.');
-                return;
-            }
-            
-            showLoading('Signing in with Farcaster...');
+        async function handleSignIn(authData) {
+            showLoading('Loading your profile...');
             
             try {
-                // Exchange code for user data via backend
-                const response = await fetch(`${API_BASE}/auth/callback`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        code: code,
-                        redirect_uri: CALLBACK_URL
-                    })
-                });
+                // Get FID from auth data
+                const fid = authData.fid;
                 
-                const data = await response.json();
+                // Fetch full user data from backend
+                const response = await fetch(`${API_BASE}/user/${fid}`);
+                const userData = await response.json();
                 
                 if (!response.ok) {
-                    throw new Error(data.error || 'Authentication failed');
+                    throw new Error(userData.error || 'Failed to fetch user data');
                 }
                 
-                // Store user data
-                currentUser = data.user;
+                currentUser = {
+                    ...userData,
+                    authData: authData
+                };
                 
-                // Update UI
                 updateUIForLogin();
-                
                 hideLoading();
-                showSuccess(`Welcome, @${data.user.username}!`);
+                showSuccess(`Welcome, @${userData.username}!`);
                 
             } catch (error) {
-                console.error('OAuth callback error:', error);
+                console.error('Sign in error:', error);
                 hideLoading();
-                showError('Sign in failed: ' + error.message);
+                showError('Failed to load profile: ' + error.message);
             }
-            
-            sessionStorage.removeItem('oauth_state');
         }
 
         function updateUIForLogin() {
-            // Hide auth button
-            document.getElementById('authContainer').style.display = 'none';
-            
-            // Show profile image
             const profileImg = document.getElementById('profileImage');
             profileImg.src = currentUser.profileImage;
             profileImg.classList.add('show');
             
-            // Show user info
             document.getElementById('userInfo').classList.add('show');
             document.getElementById('username').textContent = `@${currentUser.username}`;
             document.getElementById('fid').textContent = currentUser.fid;
@@ -538,21 +485,15 @@
             document.getElementById('mintPrice').textContent = `${currentUser.mintPrice} ETH`;
             document.getElementById('eligible').textContent = currentUser.isEligible ? '✅ Yes' : '❌ No';
             
-            // Enable transform button
             document.getElementById('transformBtn').disabled = false;
-            
-            // Show sign out button
             document.getElementById('signOutBtn').style.display = 'block';
         }
 
         function handleSignOut() {
-            // Reset state
             currentUser = null;
             transformedImageUrl = null;
             tokenURI = null;
             
-            // Reset UI
-            document.getElementById('authContainer').style.display = 'block';
             document.getElementById('profileImage').classList.remove('show');
             document.getElementById('userInfo').classList.remove('show');
             document.getElementById('previewImage').classList.remove('show');
@@ -603,13 +544,11 @@
                     throw new Error(data.error || 'Failed to transform image');
                 }
                 
-                // Show transformed image
                 transformedImageUrl = data.transformedUrl;
                 const previewImg = document.getElementById('previewImage');
                 previewImg.src = transformedImageUrl;
                 previewImg.classList.add('show');
                 
-                // Show mint button
                 document.getElementById('mintBtn').style.display = 'block';
                 
                 hideLoading();
@@ -633,7 +572,6 @@
             hideSuccess();
             
             try {
-                // Prepare metadata and upload to IPFS
                 const response = await fetch(`${API_BASE}/prepare-mint`, {
                     method: 'POST',
                     headers: {
@@ -655,7 +593,6 @@
                 
                 tokenURI = data.tokenURI;
                 
-                // Now mint via smart contract
                 showLoading('Minting your NFT... (confirm in wallet)');
                 
                 await mintNFT();
@@ -673,19 +610,16 @@
                     throw new Error('Please install MetaMask to mint!');
                 }
                 
-                // Connect wallet
                 await window.ethereum.request({ method: 'eth_requestAccounts' });
                 const provider = new ethers.providers.Web3Provider(window.ethereum);
                 const signer = provider.getSigner();
                 
-                // Switch to Base network
                 try {
                     await window.ethereum.request({
                         method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: '0x2105' }], // Base mainnet
+                        params: [{ chainId: '0x2105' }],
                     });
                 } catch (switchError) {
-                    // Chain not added, add it
                     if (switchError.code === 4902) {
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
@@ -702,7 +636,6 @@
                     }
                 }
                 
-                // TODO: Replace with your actual deployed contract address
                 const CONTRACT_ADDRESS = '0xYOUR_CONTRACT_ADDRESS_HERE';
                 const CONTRACT_ABI = [
                     "function mint(address to, string memory uri, uint256 fid) public payable",
@@ -712,10 +645,8 @@
                 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
                 const address = await signer.getAddress();
                 
-                // Get mint price
                 const mintPrice = await contract.getMintPrice(address);
                 
-                // Mint!
                 const tx = await contract.mint(address, tokenURI, currentUser.fid, {
                     value: mintPrice
                 });
@@ -727,7 +658,6 @@
                 hideLoading();
                 showSuccess(`🎉 NFT Minted Successfully! Transaction: ${tx.hash}`);
                 
-                // Update supply
                 await loadMintingParameters();
                 
             } catch (error) {
@@ -737,7 +667,6 @@
             }
         }
 
-        // Utility functions
         function showLoading(text) {
             document.getElementById('loadingText').textContent = text;
             document.getElementById('loading').classList.add('show');

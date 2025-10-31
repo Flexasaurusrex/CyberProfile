@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CyberProfile - Mint Your Cyberpunk Identity</title>
+    
+    <!-- Neynar SIWN SDK -->
+    <script src="https://neynarxyz.github.io/siwn/raw/1.2.0/index.js" defer></script>
+    
+    <!-- Web3 Library -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -33,184 +40,182 @@
                 transparent 2px
             );
             pointer-events: none;
-            z-index: 1000;
+            z-index: 9999;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
-            position: relative;
-            z-index: 1;
+            padding: 20px;
         }
 
-        .header {
+        header {
             text-align: center;
-            margin-bottom: 3rem;
-            animation: glitch 1s infinite;
-        }
-
-        @keyframes glitch {
-            0%, 100% { text-shadow: 2px 2px #ff00ff, -2px -2px #00ff9f; }
-            50% { text-shadow: -2px 2px #ff00ff, 2px -2px #00ff9f; }
+            padding: 40px 0;
+            border-bottom: 2px solid #00ff9f;
+            margin-bottom: 40px;
         }
 
         h1 {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            letter-spacing: 0.5rem;
+            font-size: 3em;
+            text-shadow: 0 0 20px #00ff9f, 0 0 40px #00ff9f;
+            margin-bottom: 10px;
+            animation: glitch 3s infinite;
         }
 
-        .tagline {
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+        }
+
+        .subtitle {
+            font-size: 1.2em;
             color: #ff00ff;
-            font-size: 1.2rem;
+            text-shadow: 0 0 10px #ff00ff;
         }
 
-        .main-grid {
+        .main-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
         }
 
         .card {
-            background: rgba(10, 10, 10, 0.8);
+            background: rgba(0, 255, 159, 0.05);
             border: 2px solid #00ff9f;
             border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 0 20px rgba(0, 255, 159, 0.3);
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 255, 159, 0.2);
         }
 
         .card h2 {
             color: #ff00ff;
-            margin-bottom: 1.5rem;
-            font-size: 1.8rem;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            text-shadow: 0 0 10px #ff00ff;
         }
 
         .profile-section {
-            margin-bottom: 2rem;
+            text-align: center;
+            margin-bottom: 30px;
         }
 
-        .image-container {
-            width: 100%;
-            aspect-ratio: 1;
-            border: 3px solid #ff00ff;
-            border-radius: 10px;
-            overflow: hidden;
-            background: #000;
-            margin-bottom: 1rem;
-            position: relative;
+        .profile-image {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 3px solid #00ff9f;
+            margin: 20px auto;
+            display: none;
+            box-shadow: 0 0 30px rgba(0, 255, 159, 0.5);
         }
 
-        .image-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        .profile-image.show {
+            display: block;
         }
 
-        .nft-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #ff00ff;
-            color: #000;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            font-weight: bold;
-            font-size: 0.8rem;
+        .user-info {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .user-info.show {
+            display: block;
         }
 
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 0.5rem;
-            padding: 0.5rem;
-            background: rgba(0, 255, 159, 0.05);
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(0, 255, 159, 0.1);
             border-radius: 5px;
         }
 
         .info-label {
-            color: #00ff9f;
+            color: #ff00ff;
+            font-weight: bold;
         }
 
         .info-value {
-            color: #fff;
-            font-weight: bold;
+            color: #00ff9f;
         }
 
-        .btn {
-            width: 100%;
-            padding: 1rem 2rem;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            transition: all 0.3s;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(45deg, #ff00ff, #00ff9f);
-            color: #000;
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
-            transform: scale(1.02);
-        }
-
-        .btn-secondary {
+        button {
             background: linear-gradient(45deg, #00ff9f, #00ffff);
             color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            width: 100%;
+            margin-top: 10px;
         }
 
-        .btn-secondary:hover {
-            box-shadow: 0 0 30px rgba(0, 255, 159, 0.8);
-            transform: scale(1.02);
-        }
-
-        .btn-mint {
-            background: linear-gradient(45deg, #ff0080, #ff00ff);
-            color: #fff;
-        }
-
-        .btn-mint:hover {
-            box-shadow: 0 0 40px rgba(255, 0, 255, 1);
+        button:hover {
             transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 255, 159, 0.6);
         }
 
-        .btn:disabled {
+        button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
 
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+        .preview-section {
+            text-align: center;
+        }
+
+        .preview-image {
             width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
+            max-width: 400px;
+            border: 3px solid #ff00ff;
+            border-radius: 10px;
+            margin: 20px auto;
+            display: none;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+        }
+
+        .preview-image.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            color: #ff00ff;
+            font-size: 1.2em;
+            display: none;
+            margin: 20px 0;
+        }
+
+        .loading.show {
+            display: block;
         }
 
         .spinner {
-            border: 5px solid rgba(0, 255, 159, 0.3);
-            border-top: 5px solid #ff00ff;
+            border: 4px solid rgba(255, 0, 255, 0.3);
+            border-top: 4px solid #ff00ff;
             border-radius: 50%;
-            width: 80px;
-            height: 80px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
-            margin-bottom: 2rem;
+            margin: 20px auto;
         }
 
         @keyframes spin {
@@ -218,83 +223,81 @@
             100% { transform: rotate(360deg); }
         }
 
-        .loading-text {
-            font-size: 1.5rem;
-            color: #00ff9f;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .stat-card {
-            background: rgba(255, 0, 255, 0.1);
-            padding: 1rem;
+        .success {
+            background: rgba(0, 255, 159, 0.2);
+            border: 2px solid #00ff9f;
+            padding: 15px;
             border-radius: 5px;
-            border: 1px solid #ff00ff;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .success.show {
+            display: block;
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid #ff0000;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            color: #ff0000;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        /* SIWN Button Container */
+        #siwn-button {
+            margin: 20px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge.pro {
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #000;
+        }
+
+        .badge.regular {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 159, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
         }
 
         .stat-label {
-            font-size: 0.9rem;
-            color: #00ff9f;
-            margin-bottom: 0.5rem;
+            color: #ff00ff;
+            font-size: 0.9em;
+            margin-bottom: 5px;
         }
 
         .stat-value {
-            font-size: 1.5rem;
-            color: #fff;
-            font-weight: bold;
-        }
-
-        #eligibility {
-            text-align: center;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-            font-weight: bold;
-        }
-
-        .auth-card {
-            background: rgba(10, 10, 10, 0.95);
-            border: 3px solid #ff00ff;
-            border-radius: 15px;
-            padding: 3rem;
-            text-align: center;
-            box-shadow: 0 0 40px rgba(255, 0, 255, 0.5);
-        }
-
-        .auth-card h2 {
-            font-size: 2.5rem;
-            margin-bottom: 2rem;
-            animation: glitch 1s infinite;
-        }
-
-        .auth-card p {
-            font-size: 1.2rem;
             color: #00ff9f;
-            margin-bottom: 2rem;
-            line-height: 1.6;
-        }
-
-        .security-note {
-            background: rgba(0, 255, 159, 0.1);
-            border: 1px solid #00ff9f;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-top: 2rem;
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            .main-grid {
-                grid-template-columns: 1fr;
-            }
-            h1 {
-                font-size: 2.5rem;
-            }
+            font-size: 1.5em;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -302,456 +305,413 @@
     <div class="scanlines"></div>
     
     <div class="container">
-        <div class="header">
+        <header>
             <h1>⚡ CYBERPROFILE ⚡</h1>
-            <p class="tagline">Transform Your Identity. Mint Your Future.</p>
-        </div>
+            <p class="subtitle">Transform Your Farcaster PFP Into Cyberpunk NFT</p>
+        </header>
 
-        <!-- Auth Screen (shown when not authenticated) -->
-        <div id="authScreen" style="display: block;">
-            <div class="auth-card">
-                <h2>🔐 SECURE LOGIN</h2>
-                <p>
-                    Connect your Farcaster account to mint your unique CyberProfile NFT.
-                    <br><br>
-                    Your signature proves you own your Farcaster ID - no imposters allowed!
-                </p>
+        <div class="main-content">
+            <!-- Left Column: User Profile & Auth -->
+            <div class="card">
+                <h2>🔐 Your Identity</h2>
                 
-                <button class="btn btn-primary" id="authBtn" onclick="authenticateFarcaster()">
-                    🔗 SIGN IN WITH FARCASTER
-                </button>
-
-                <div class="security-note">
-                    <strong>🛡️ Why Sign In?</strong><br>
-                    • Proves you own your FID<br>
-                    • Prevents fraud & identity theft<br>
-                    • Cryptographically secure<br>
-                    • You control your identity
-                </div>
-            </div>
-        </div>
-
-        <!-- Main App (shown when authenticated) -->
-        <div id="mainApp" style="display: none;">
-            <div class="main-grid">
-                <!-- Original Profile -->
-                <div class="card">
-                    <h2>👤 Original Profile</h2>
-                    <div class="profile-section">
-                        <div class="image-container">
-                            <img id="originalImage" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23000' width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' fill='%2300ff9f' font-size='24' text-anchor='middle' dy='.3em'%3EOriginal PFP%3C/text%3E%3C/svg%3E" alt="Original PFP">
+                <div class="profile-section">
+                    <!-- Neynar SIWN Button -->
+                    <div id="siwn-button"></div>
+                    
+                    <img id="profileImage" class="profile-image" alt="Profile">
+                    
+                    <div id="userInfo" class="user-info">
+                        <div class="info-row">
+                            <span class="info-label">Username:</span>
+                            <span class="info-value" id="username">-</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">FID:</span>
-                            <span class="info-value" id="fidValue">-</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Username:</span>
-                            <span class="info-value" id="usernameValue">-</span>
+                            <span class="info-value" id="fid">-</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Account:</span>
-                            <span class="info-value" id="accountType">👤 FREE</span>
+                            <span class="info-value" id="accountType">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Mint Cost:</span>
-                            <span class="info-value" id="mintCost">-</span>
+                            <span class="info-label">Mint Price:</span>
+                            <span class="info-value" id="mintPrice">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Eligible:</span>
+                            <span class="info-value" id="eligible">-</span>
                         </div>
                     </div>
-                    
-                    <div id="eligibility"></div>
-                    
-                    <button class="btn btn-secondary" id="transformBtn" onclick="transformProfile()" disabled>
-                        🎨 GENERATE CYBERPUNK PFP
-                    </button>
-
-                    <button class="btn btn-primary" onclick="logout()" style="margin-top: 1rem;">
-                        🚪 LOGOUT
-                    </button>
                 </div>
 
-                <!-- Cyberpunk Transform -->
-                <div class="card">
-                    <h2>🔮 Cyberpunk Transform</h2>
-                    <div class="profile-section">
-                        <div class="image-container">
-                            <span class="nft-badge">NFT</span>
-                            <img id="transformedImage" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23000' width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' fill='%23ff00ff' font-size='20' text-anchor='middle' dy='.3em'%3ETransform to Preview%3C/text%3E%3C/svg%3E" alt="Transformed PFP">
-                        </div>
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-label">Total Minted</div>
+                        <div class="stat-value" id="totalMinted">0</div>
                     </div>
-                    
-                    <button class="btn btn-mint" id="mintBtn" onclick="mintNFT()" disabled>
-                        💎 MINT NFT
-                    </button>
+                    <div class="stat-box">
+                        <div class="stat-label">Max Supply</div>
+                        <div class="stat-value" id="maxSupply">10000</div>
+                    </div>
                 </div>
+
+                <button id="signOutBtn" style="display:none; background: rgba(255,0,0,0.3);">Sign Out</button>
             </div>
 
-            <!-- Stats Section -->
+            <!-- Right Column: Transform & Mint -->
             <div class="card">
-                <h2>📊 Minting Statistics</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">FID Range</div>
-                        <div class="stat-value" id="fidRange">-</div>
+                <h2>🎨 Cyberpunk Transform</h2>
+                
+                <div class="preview-section">
+                    <p>Sign in with Farcaster to start transforming!</p>
+                    
+                    <img id="previewImage" class="preview-image" alt="Transformed Preview">
+                    
+                    <div id="loading" class="loading">
+                        <div class="spinner"></div>
+                        <p id="loadingText">Processing...</p>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Pro Discount</div>
-                        <div class="stat-value" id="proDiscount">-</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Base Price</div>
-                        <div class="stat-value" id="baseMintPrice">-</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Pro Price</div>
-                        <div class="stat-value" id="proMintPrice">-</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Total Supply</div>
-                        <div class="stat-value" id="maxSupply">-</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Minted</div>
-                        <div class="stat-value" id="totalMinted">-</div>
-                    </div>
+                    
+                    <button id="transformBtn" disabled>🎭 Generate Cyberpunk PFP</button>
+                    <button id="mintBtn" style="display:none;">💎 Mint NFT</button>
+                    
+                    <div id="successMsg" class="success"></div>
+                    <div id="errorMsg" class="error"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-        <div class="loading-text">Processing...</div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <script>
         // Configuration
         const API_BASE = 'https://cyberprofile-production.up.railway.app/api';
-        const CONTRACT_ADDRESS = 'YOUR_CONTRACT_ADDRESS';
-        const CHAIN_ID = 8453; // Base chain
-
+        const NEYNAR_CLIENT_ID = 'YOUR_NEYNAR_CLIENT_ID'; // Get from Neynar dashboard
+        
         // State
-        let authToken = null;
-        let userFid = null;
-        let userAddress = null;
-        let isPro = false;
-        let username = null;
-        let displayName = null;
+        let currentUser = null;
         let transformedImageUrl = null;
-        let mintingParameters = null;
+        let tokenURI = null;
 
-        // Contract ABI (simplified)
-        const CONTRACT_ABI = [
-            "function mint(address to, string memory tokenURI, uint256 fid) public payable",
-            "function getMintPrice(uint256 fid, bool isPro) public view returns (uint256)",
-            "function hasMinted(uint256 fid) public view returns (bool)"
-        ];
-
-        // Check for existing auth on load
-        window.addEventListener('DOMContentLoaded', async () => {
-            // Check if user has auth token
-            const savedToken = localStorage.getItem('fcAuthToken');
-            const savedFid = localStorage.getItem('fcUserFid');
-            
-            if (savedToken && savedFid) {
-                // Verify token is still valid
-                try {
-                    const response = await fetch(`${API_BASE}/auth/verify`, {
-                        headers: {
-                            'Authorization': `Bearer ${savedToken}`
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        authToken = savedToken;
-                        userFid = parseInt(savedFid);
-                        await loadAuthenticatedUser();
-                    } else {
-                        // Token invalid, clear storage
-                        localStorage.removeItem('fcAuthToken');
-                        localStorage.removeItem('fcUserFid');
-                    }
-                } catch (error) {
-                    console.error('Token verification error:', error);
-                }
-            }
-            
+        // Initialize SIWN
+        window.onload = async function() {
+            // Load minting parameters
             await loadMintingParameters();
-        });
+            
+            // Initialize Neynar SIWN Button
+            const siwn = new window.NeynarSignIn({
+                client_id: NEYNAR_CLIENT_ID,
+                callback_url: window.location.origin,
+                api_url: 'https://api.neynar.com'
+            });
+
+            siwn.addEventListener('auth', async (event) => {
+                const { fid, username, display_name, pfp_url, signer_uuid } = event.detail;
+                console.log('Auth success:', event.detail);
+                
+                // Store user data
+                currentUser = {
+                    fid: fid,
+                    username: username,
+                    displayName: display_name,
+                    profileImage: pfp_url,
+                    signerUuid: signer_uuid
+                };
+                
+                // Update UI
+                await handleAuthSuccess();
+            });
+
+            siwn.addEventListener('logout', () => {
+                console.log('User logged out');
+                currentUser = null;
+                updateUIForLogout();
+            });
+
+            siwn.mount('siwn-button');
+        };
+
+        async function handleAuthSuccess() {
+            try {
+                // Fetch full user data from our backend
+                const response = await fetch(`${API_BASE}/user/${currentUser.fid}`);
+                const userData = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(userData.error || 'Failed to fetch user data');
+                }
+                
+                // Update current user with backend data
+                currentUser = {
+                    ...currentUser,
+                    ...userData
+                };
+                
+                // Update UI
+                updateUIForLogin();
+                
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                showError('Failed to load user data: ' + error.message);
+            }
+        }
+
+        function updateUIForLogin() {
+            // Show profile image
+            const profileImg = document.getElementById('profileImage');
+            profileImg.src = currentUser.profileImage;
+            profileImg.classList.add('show');
+            
+            // Show user info
+            document.getElementById('userInfo').classList.add('show');
+            document.getElementById('username').textContent = `@${currentUser.username}`;
+            document.getElementById('fid').textContent = currentUser.fid;
+            
+            const accountType = currentUser.isPro ? 
+                '<span class="badge pro">⭐ PRO</span>' : 
+                '<span class="badge regular">Regular</span>';
+            document.getElementById('accountType').innerHTML = accountType;
+            
+            document.getElementById('mintPrice').textContent = `${currentUser.mintPrice} ETH`;
+            document.getElementById('eligible').textContent = currentUser.isEligible ? '✅ Yes' : '❌ No';
+            
+            // Enable transform button
+            document.getElementById('transformBtn').disabled = false;
+            
+            // Show sign out button
+            document.getElementById('signOutBtn').style.display = 'block';
+        }
+
+        function updateUIForLogout() {
+            // Hide profile elements
+            document.getElementById('profileImage').classList.remove('show');
+            document.getElementById('userInfo').classList.remove('show');
+            document.getElementById('previewImage').classList.remove('show');
+            
+            // Reset buttons
+            document.getElementById('transformBtn').disabled = true;
+            document.getElementById('mintBtn').style.display = 'none';
+            document.getElementById('signOutBtn').style.display = 'none';
+            
+            // Clear data
+            transformedImageUrl = null;
+            tokenURI = null;
+        }
 
         async function loadMintingParameters() {
             try {
                 const response = await fetch(`${API_BASE}/parameters`);
                 const params = await response.json();
-                mintingParameters = params;
-                updateParametersDisplay(params);
+                
+                document.getElementById('maxSupply').textContent = params.maxSupply;
+                document.getElementById('totalMinted').textContent = params.currentSupply;
             } catch (error) {
                 console.error('Error loading parameters:', error);
             }
         }
 
-        function updateParametersDisplay(params) {
-            document.getElementById('fidRange').textContent = 
-                `${params.minFid} - ${params.maxFid}`;
-            document.getElementById('proDiscount').textContent = 
-                `${params.proDiscountPercent}%`;
-            document.getElementById('baseMintPrice').textContent = 
-                `${params.baseMintPrice} ETH`;
-            document.getElementById('proMintPrice').textContent = 
-                `${params.proMintPrice} ETH`;
-            document.getElementById('maxSupply').textContent = 
-                `${params.currentSupply}/${params.maxSupply}`;
-            
-            document.getElementById('totalMinted').textContent = params.currentSupply;
-        }
-
-        async function authenticateFarcaster() {
-            const authBtn = document.getElementById('authBtn');
-            authBtn.disabled = true;
-            authBtn.textContent = '🔄 Opening Warpcast...';
-            
-            try {
-                // Step 1: Request auth challenge from backend
-                const challengeResponse = await fetch(`${API_BASE}/auth/challenge`, {
-                    method: 'POST'
-                });
-                
-                const { channelToken, url, nonce } = await challengeResponse.json();
-                
-                // Step 2: Open Warpcast for user to sign
-                const authWindow = window.open(
-                    url,
-                    'fc-auth',
-                    'width=500,height=700,menubar=no,toolbar=no'
-                );
-                
-                // Step 3: Poll for completion
-                authBtn.textContent = '⏳ Waiting for signature...';
-                
-                const pollAuth = async () => {
-                    try {
-                        const statusResponse = await fetch(
-                            `${API_BASE}/auth/status/${channelToken}`
-                        );
-                        
-                        const status = await statusResponse.json();
-                        
-                        if (status.state === 'completed') {
-                            // Auth successful!
-                            authToken = status.token;
-                            userFid = status.fid;
-                            
-                            // Save to localStorage
-                            localStorage.setItem('fcAuthToken', authToken);
-                            localStorage.setItem('fcUserFid', userFid);
-                            
-                            if (authWindow && !authWindow.closed) {
-                                authWindow.close();
-                            }
-                            
-                            await loadAuthenticatedUser();
-                        } else if (status.state === 'pending') {
-                            // Keep polling
-                            setTimeout(pollAuth, 2000);
-                        } else {
-                            throw new Error('Authentication failed');
-                        }
-                    } catch (error) {
-                        console.error('Poll error:', error);
-                        throw error;
-                    }
-                };
-                
-                setTimeout(pollAuth, 2000);
-                
-            } catch (error) {
-                console.error('Authentication error:', error);
-                alert('Authentication failed. Please try again.');
-                authBtn.disabled = false;
-                authBtn.textContent = '🔗 SIGN IN WITH FARCASTER';
-            }
-        }
-
-        async function loadAuthenticatedUser() {
-            try {
-                // Fetch user data
-                const response = await fetch(`${API_BASE}/user/${userFid}`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to fetch user data');
-                }
-                
-                const userData = await response.json();
-                
-                isPro = userData.isPro;
-                username = userData.username;
-                displayName = userData.displayName;
-                
-                // Update UI
-                document.getElementById('originalImage').src = userData.profileImage;
-                document.getElementById('fidValue').textContent = userFid;
-                document.getElementById('usernameValue').textContent = username;
-                document.getElementById('accountType').textContent = 
-                    isPro ? '⭐ PRO' : '👤 FREE';
-                
-                const mintPrice = userData.mintPrice;
-                document.getElementById('mintCost').textContent = 
-                    `${mintPrice} ETH`;
-                
-                // Check eligibility
-                if (userData.isEligible) {
-                    document.getElementById('eligibility').innerHTML = 
-                        '<span style="color: #00ff9f;">✅ Eligible to mint</span>';
-                    document.getElementById('transformBtn').disabled = false;
-                } else {
-                    document.getElementById('eligibility').innerHTML = 
-                        '<span style="color: #ff00ff;">❌ Not eligible</span>';
-                }
-                
-                // Show main app, hide auth screen
-                document.getElementById('authScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                
-            } catch (error) {
-                console.error('Load user error:', error);
-                alert('Failed to load user data. Please try again.');
-                logout();
-            }
-        }
-
-        async function transformProfile() {
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            const transformBtn = document.getElementById('transformBtn');
-            
-            try {
-                loadingOverlay.style.display = 'flex';
-                transformBtn.disabled = true;
-                
-                // Call AI transformation API
-                const response = await fetch(`${API_BASE}/transform`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({
-                        fid: userFid,
-                        imageUrl: document.getElementById('originalImage').src
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Transformation failed');
-                }
-                
-                const result = await response.json();
-                transformedImageUrl = result.transformedUrl;
-                
-                // Update image
-                document.getElementById('transformedImage').src = transformedImageUrl;
-                
-                // Enable mint button
-                document.getElementById('mintBtn').disabled = false;
-                
-            } catch (error) {
-                console.error('Transformation error:', error);
-                alert('Transformation failed. Please try again.');
-            } finally {
-                loadingOverlay.style.display = 'none';
-                transformBtn.disabled = false;
-            }
-        }
-
-        async function mintNFT() {
-            if (!transformedImageUrl) {
-                alert('Please transform your profile first!');
+        // Transform button handler
+        document.getElementById('transformBtn').addEventListener('click', async () => {
+            if (!currentUser) {
+                showError('Please sign in first!');
                 return;
             }
             
+            showLoading('Transforming your profile into cyberpunk art...');
+            hideError();
+            hideSuccess();
+            
             try {
-                if (!window.ethereum) {
-                    alert('Please install MetaMask to mint!');
-                    return;
-                }
-                
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                const signer = provider.getSigner();
-                
-                // Prepare mint (upload to IPFS and create metadata)
-                const metadataResponse = await fetch(`${API_BASE}/prepare-mint`, {
+                const response = await fetch(`${API_BASE}/transform`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
+                    headers: {
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        imageUrl: transformedImageUrl,
-                        fid: userFid,
-                        username: username,
-                        displayName: displayName
+                        imageUrl: currentUser.profileImage,
+                        fid: currentUser.fid
                     })
                 });
                 
-                const { tokenURI } = await metadataResponse.json();
+                const data = await response.json();
                 
-                // Get contract
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to transform image');
+                }
+                
+                // Show transformed image
+                transformedImageUrl = data.transformedUrl;
+                const previewImg = document.getElementById('previewImage');
+                previewImg.src = transformedImageUrl;
+                previewImg.classList.add('show');
+                
+                // Show mint button
+                document.getElementById('mintBtn').style.display = 'block';
+                
+                hideLoading();
+                showSuccess('Transformation complete! Ready to mint.');
+                
+            } catch (error) {
+                console.error('Transform error:', error);
+                hideLoading();
+                showError('Transform failed: ' + error.message);
+            }
+        });
+
+        // Mint button handler
+        document.getElementById('mintBtn').addEventListener('click', async () => {
+            if (!currentUser || !transformedImageUrl) {
+                showError('Please transform your profile first!');
+                return;
+            }
+            
+            showLoading('Preparing your NFT... (uploading to IPFS)');
+            hideError();
+            hideSuccess();
+            
+            try {
+                // Prepare metadata and upload to IPFS
+                const response = await fetch(`${API_BASE}/prepare-mint`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        imageUrl: transformedImageUrl,
+                        fid: currentUser.fid,
+                        username: currentUser.username,
+                        displayName: currentUser.displayName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to prepare mint');
+                }
+                
+                tokenURI = data.tokenURI;
+                
+                // Now mint via smart contract
+                showLoading('Minting your NFT... (confirm in wallet)');
+                
+                await mintNFT();
+                
+            } catch (error) {
+                console.error('Mint error:', error);
+                hideLoading();
+                showError('Mint failed: ' + error.message);
+            }
+        });
+
+        async function mintNFT() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error('Please install MetaMask to mint!');
+                }
+                
+                // Connect wallet
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+                
+                // Switch to Base network
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: '0x2105' }], // Base mainnet
+                    });
+                } catch (switchError) {
+                    // Chain not added, add it
+                    if (switchError.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: '0x2105',
+                                chainName: 'Base',
+                                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                                rpcUrls: ['https://mainnet.base.org'],
+                                blockExplorerUrls: ['https://basescan.org']
+                            }]
+                        });
+                    } else {
+                        throw switchError;
+                    }
+                }
+                
+                // TODO: Replace with your actual deployed contract address
+                const CONTRACT_ADDRESS = '0xYOUR_CONTRACT_ADDRESS_HERE';
+                const CONTRACT_ABI = [
+                    "function mint(address to, string memory uri, uint256 fid) public payable",
+                    "function getMintPrice(address user) public view returns (uint256)"
+                ];
+                
                 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                const address = await signer.getAddress();
                 
                 // Get mint price
-                const mintPrice = await contract.getMintPrice(userFid, isPro);
-                
-                // Get user address
-                userAddress = await signer.getAddress();
+                const mintPrice = await contract.getMintPrice(address);
                 
                 // Mint!
-                const tx = await contract.mint(userAddress, tokenURI, userFid, {
+                const tx = await contract.mint(address, tokenURI, currentUser.fid, {
                     value: mintPrice
                 });
                 
-                document.getElementById('mintBtn').textContent = '⏳ Minting...';
-                document.getElementById('mintBtn').disabled = true;
+                showLoading('Transaction submitted! Waiting for confirmation...');
                 
                 await tx.wait();
                 
-                alert('🎉 Successfully minted your CyberProfile NFT!');
-                document.getElementById('mintBtn').textContent = '✅ MINTED!';
+                hideLoading();
+                showSuccess(`🎉 NFT Minted Successfully! Transaction: ${tx.hash}`);
                 
-                // Refresh stats
+                // Update supply
                 await loadMintingParameters();
                 
             } catch (error) {
-                console.error('Minting error:', error);
-                alert('Minting failed: ' + error.message);
-                document.getElementById('mintBtn').textContent = '💎 MINT NFT';
-                document.getElementById('mintBtn').disabled = false;
+                console.error('Mint transaction error:', error);
+                hideLoading();
+                showError('Mint transaction failed: ' + error.message);
             }
         }
 
-        function logout() {
-            // Clear auth
-            authToken = null;
-            userFid = null;
-            userAddress = null;
-            localStorage.removeItem('fcAuthToken');
-            localStorage.removeItem('fcUserFid');
-            
-            // Reset UI
-            document.getElementById('authScreen').style.display = 'block';
-            document.getElementById('mainApp').style.display = 'none';
-            document.getElementById('transformBtn').disabled = true;
-            document.getElementById('mintBtn').disabled = true;
+        // Sign out button
+        document.getElementById('signOutBtn').addEventListener('click', () => {
+            if (window.NeynarSignIn) {
+                // Trigger logout
+                window.location.reload();
+            }
+        });
+
+        // Utility functions
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loading').classList.add('show');
         }
 
-        // Auto-refresh parameters every 30 seconds
-        setInterval(loadMintingParameters, 30000);
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+
+        function showSuccess(message) {
+            const el = document.getElementById('successMsg');
+            el.textContent = message;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+
+        function hideSuccess() {
+            document.getElementById('successMsg').classList.remove('show');
+        }
+
+        function showError(message) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = message;
+            el.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('errorMsg').classList.remove('show');
+        }
     </script>
 </body>
 </html>

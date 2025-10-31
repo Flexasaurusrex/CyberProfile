@@ -1,4 +1,4 @@
-// server.js - Backend API for CyberProfile Minting with SIWN Auth
+// server.js - Backend API for CyberProfile Minting
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -44,13 +44,15 @@ let mintingParameters = {
     baseMintPrice: ethers.utils.parseEther('0.002'),
     proMintPrice: ethers.utils.parseEther('0.001'),
     proDiscountPercent: 50,
-    maxSupply: 10000,
     currentSupply: 0,
     paused: false
 };
 
 // Cache for transformed images
 const transformCache = new Map();
+
+// Track minted FIDs (in production, use database)
+const mintedFids = new Set();
 
 // ===== FARCASTER INTEGRATION =====
 
@@ -82,29 +84,6 @@ async function getFarcasterUser(fid) {
     } catch (error) {
         console.error('Error fetching Farcaster user:', error.response?.data || error.message);
         throw new Error('Failed to fetch Farcaster user data');
-    }
-}
-
-/**
- * Verify signer UUID with Neynar (optional extra security)
- */
-async function verifySignerUuid(signerUuid, fid) {
-    try {
-        const response = await axios.get(
-            `https://api.neynar.com/v2/farcaster/signer?signer_uuid=${signerUuid}`,
-            {
-                headers: {
-                    'accept': 'application/json',
-                    'api_key': NEYNAR_API_KEY
-                }
-            }
-        );
-        
-        // Check if signer belongs to the claimed FID
-        return response.data.fid === parseInt(fid);
-    } catch (error) {
-        console.error('Error verifying signer:', error.response?.data || error.message);
-        return false;
     }
 }
 
@@ -229,6 +208,65 @@ async function uploadMetadataToIPFS(metadata) {
 // ===== API ROUTES =====
 
 /**
+ * OAuth callback - exchange code for user data
+ */
+app.post('/api/auth/callback', async (req, res) => {
+    try {
+        const { code, redirect_uri } = req.body;
+        
+        if (!code || !redirect_uri) {
+            return res.status(400).json({ error: 'Missing code or redirect_uri' });
+        }
+        
+        // Exchange code for access token with Neynar
+        const tokenResponse = await axios.post(
+            'https://app.neynar.com/api/siwn/token',
+            {
+                code: code,
+                redirect_uri: redirect_uri,
+                grant_type: 'authorization_code'
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api_key': NEYNAR_API_KEY
+                }
+            }
+        );
+        
+        const { fid, signer_uuid } = tokenResponse.data;
+        
+        // Get full user data
+        const userData = await getFarcasterUser(fid);
+        
+        // Check eligibility
+        const isEligible = fid >= mintingParameters.minFid && 
+                          fid <= mintingParameters.maxFid &&
+                          !mintedFids.has(fid) &&
+                          !mintingParameters.paused;
+        
+        const mintPrice = userData.isPro ? 
+            mintingParameters.proMintPrice : 
+            mintingParameters.baseMintPrice;
+        
+        res.json({
+            success: true,
+            user: {
+                ...userData,
+                isEligible,
+                mintPrice: ethers.utils.formatEther(mintPrice),
+                hasMinted: mintedFids.has(fid),
+                signerUuid: signer_uuid
+            }
+        });
+        
+    } catch (error) {
+        console.error('OAuth callback error:', error.response?.data || error.message);
+        res.status(500).json({ error: 'Authentication failed' });
+    }
+});
+
+/**
  * Health check
  */
 app.get('/health', (req, res) => {
@@ -256,9 +294,10 @@ app.get('/api/user/:fid', async (req, res) => {
         
         const userData = await getFarcasterUser(fid);
         
+        // Check eligibility: FID in range, not paused, hasn't minted yet
         const isEligible = fid >= mintingParameters.minFid && 
                           fid <= mintingParameters.maxFid &&
-                          mintingParameters.currentSupply < mintingParameters.maxSupply &&
+                          !mintedFids.has(fid) &&
                           !mintingParameters.paused;
         
         const mintPrice = userData.isPro ? 
@@ -269,10 +308,10 @@ app.get('/api/user/:fid', async (req, res) => {
             ...userData,
             isEligible,
             mintPrice: ethers.utils.formatEther(mintPrice),
+            hasMinted: mintedFids.has(fid),
             parameters: {
                 minFid: mintingParameters.minFid,
                 maxFid: mintingParameters.maxFid,
-                maxSupply: mintingParameters.maxSupply,
                 currentSupply: mintingParameters.currentSupply,
                 paused: mintingParameters.paused
             }
@@ -316,6 +355,11 @@ app.post('/api/prepare-mint', async (req, res) => {
         
         if (!imageUrl || !fid || !username) {
             return res.status(400).json({ error: 'Missing required fields' });
+        }
+        
+        // Check if FID already minted
+        if (mintedFids.has(fid)) {
+            return res.status(400).json({ error: 'This FID has already minted' });
         }
         
         console.log('Preparing mint for FID:', fid);
@@ -387,7 +431,7 @@ app.get('/api/admin/stats', async (req, res) => {
     try {
         res.json({
             currentSupply: mintingParameters.currentSupply,
-            maxSupply: mintingParameters.maxSupply,
+            totalMinted: mintedFids.size,
             isPaused: mintingParameters.paused,
             parameters: {
                 ...mintingParameters,
@@ -406,13 +450,12 @@ app.get('/api/admin/stats', async (req, res) => {
  */
 app.post('/api/admin/update-parameters', (req, res) => {
     try {
-        const { minFid, maxFid, baseMintPrice, proMintPrice, maxSupply } = req.body;
+        const { minFid, maxFid, baseMintPrice, proMintPrice } = req.body;
         
         if (minFid !== undefined) mintingParameters.minFid = parseInt(minFid);
         if (maxFid !== undefined) mintingParameters.maxFid = parseInt(maxFid);
         if (baseMintPrice !== undefined) mintingParameters.baseMintPrice = ethers.utils.parseEther(baseMintPrice.toString());
         if (proMintPrice !== undefined) mintingParameters.proMintPrice = ethers.utils.parseEther(proMintPrice.toString());
-        if (maxSupply !== undefined) mintingParameters.maxSupply = parseInt(maxSupply);
         
         console.log('Parameters updated:', mintingParameters);
         
@@ -449,6 +492,13 @@ app.post('/api/record-mint', (req, res) => {
     try {
         const { fid, txHash } = req.body;
         
+        if (!fid) {
+            return res.status(400).json({ error: 'Missing FID' });
+        }
+        
+        // Mark FID as minted
+        mintedFids.add(parseInt(fid));
+        
         // Increment supply
         mintingParameters.currentSupply++;
         
@@ -456,7 +506,8 @@ app.post('/api/record-mint', (req, res) => {
         
         res.json({ 
             success: true,
-            currentSupply: mintingParameters.currentSupply
+            currentSupply: mintingParameters.currentSupply,
+            totalUnique: mintedFids.size
         });
     } catch (error) {
         console.error('Error in /api/record-mint:', error);
@@ -471,6 +522,7 @@ app.listen(PORT, () => {
     console.log(`📡 Farcaster integration: ${NEYNAR_API_KEY ? '✅' : '❌'}`);
     console.log(`🎨 AI transformation: ${TOGETHER_API_KEY ? '✅' : '❌'}`);
     console.log(`📦 IPFS upload: ${PINATA_API_KEY ? '✅' : '❌'}`);
+    console.log(`📋 Model: One mint per FID (unlimited total supply)`);
 });
 
 module.exports = app;

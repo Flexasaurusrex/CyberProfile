@@ -7,9 +7,10 @@ const axios = require('axios');
 const FormData = require('form-data');
 const multer = require('multer');
 const sharp = require('sharp');
+const crypto = require('crypto');
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage()});
 
 // Middleware
 app.use(cors({
@@ -51,6 +52,62 @@ let mintingParameters = {
 
 // Cache for transformed images
 const transformCache = new Map();
+
+// Auth session storage (in production, use Redis or database)
+const authSessions = new Map();
+const authTokens = new Map();
+
+// ===== AUTHENTICATION HELPERS =====
+
+/**
+ * Generate secure auth token
+ */
+function generateAuthToken(fid) {
+    const token = crypto.randomBytes(32).toString('hex');
+    authTokens.set(token, {
+        fid: parseInt(fid),
+        createdAt: Date.now(),
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+    });
+    return token;
+}
+
+/**
+ * Verify auth token
+ */
+function verifyAuthToken(token) {
+    const session = authTokens.get(token);
+    if (!session) return null;
+    
+    if (Date.now() > session.expiresAt) {
+        authTokens.delete(token);
+        return null;
+    }
+    
+    return session;
+}
+
+/**
+ * Auth middleware
+ */
+function requireAuth(req, res, next) {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const token = authHeader.substring(7);
+    const session = verifyAuthToken(token);
+    
+    if (!session) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+    
+    req.userFid = session.fid;
+    req.authToken = token;
+    next();
+}
 
 // ===== FARCASTER INTEGRATION =====
 
@@ -268,6 +325,120 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// ===== AUTHENTICATION ENDPOINTS =====
+
+/**
+ * Request Farcaster auth challenge
+ */
+app.post('/api/auth/challenge', async (req, res) => {
+    try {
+        // Generate unique channel token
+        const channelToken = crypto.randomBytes(16).toString('hex');
+        const nonce = crypto.randomBytes(16).toString('hex');
+        
+        // Create auth request via Neynar
+        const response = await axios.post(
+            'https://api.neynar.com/v2/farcaster/login',
+            {},
+            {
+                headers: {
+                    'api_key': NEYNAR_API_KEY,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        const { signer_uuid, url } = response.data;
+        
+        // Store auth session
+        authSessions.set(channelToken, {
+            signerUuid: signer_uuid,
+            nonce,
+            state: 'pending',
+            createdAt: Date.now()
+        });
+        
+        res.json({
+            channelToken,
+            url,
+            nonce
+        });
+    } catch (error) {
+        console.error('Auth challenge error:', error);
+        res.status(500).json({ error: 'Failed to create auth challenge' });
+    }
+});
+
+/**
+ * Check auth status (polling endpoint)
+ */
+app.get('/api/auth/status/:channelToken', async (req, res) => {
+    try {
+        const { channelToken } = req.params;
+        const session = authSessions.get(channelToken);
+        
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+        
+        // Check if already completed
+        if (session.state === 'completed') {
+            return res.json({
+                state: 'completed',
+                fid: session.fid,
+                token: session.token
+            });
+        }
+        
+        // Check Neynar for auth status
+        const response = await axios.get(
+            `https://api.neynar.com/v2/farcaster/login?signer_uuid=${session.signerUuid}`,
+            {
+                headers: {
+                    'api_key': NEYNAR_API_KEY
+                }
+            }
+        );
+        
+        const { state, fid, custody_address } = response.data;
+        
+        if (state === 'completed') {
+            // Generate auth token
+            const authToken = generateAuthToken(fid);
+            
+            // Update session
+            session.state = 'completed';
+            session.fid = fid;
+            session.custodyAddress = custody_address;
+            session.token = authToken;
+            
+            authSessions.set(channelToken, session);
+            
+            return res.json({
+                state: 'completed',
+                fid,
+                token: authToken
+            });
+        }
+        
+        res.json({ state: 'pending' });
+        
+    } catch (error) {
+        console.error('Auth status error:', error);
+        res.status(500).json({ error: 'Failed to check auth status' });
+    }
+});
+
+/**
+ * Verify auth token
+ */
+app.get('/api/auth/verify', requireAuth, (req, res) => {
+    res.json({
+        valid: true,
+        fid: req.userFid
+    });
+});
+
 /**
  * Get current minting parameters
  */
@@ -284,11 +455,17 @@ app.get('/api/parameters', async (req, res) => {
 });
 
 /**
- * Get user profile and eligibility
+ * Get user profile and eligibility (requires authentication)
  */
-app.get('/api/user/:fid', async (req, res) => {
+app.get('/api/user/:fid', requireAuth, async (req, res) => {
     try {
         const fid = parseInt(req.params.fid);
+        
+        // Verify user is requesting their own FID
+        if (fid !== req.userFid) {
+            return res.status(403).json({ error: 'Can only access your own profile' });
+        }
+        
         const userData = await getFarcasterUser(fid);
         
         const isEligible = fid >= mintingParameters.minFid && 
@@ -341,14 +518,19 @@ app.post('/api/auth/farcaster', async (req, res) => {
 });
 
 /**
- * Transform profile picture
+ * Transform profile picture (requires authentication)
  */
-app.post('/api/transform', async (req, res) => {
+app.post('/api/transform', requireAuth, async (req, res) => {
     try {
         const { fid, imageUrl } = req.body;
 
         if (!fid || !imageUrl) {
             return res.status(400).json({ error: 'Missing required parameters' });
+        }
+        
+        // Verify user is transforming their own FID
+        if (fid !== req.userFid) {
+            return res.status(403).json({ error: 'Can only transform your own profile' });
         }
 
         // Check eligibility
@@ -411,11 +593,16 @@ app.get('/api/check-eligibility/:fid', async (req, res) => {
 });
 
 /**
- * Prepare mint (transform + upload to IPFS)
+ * Prepare mint (transform + upload to IPFS) (requires authentication)
  */
-app.post('/api/prepare-mint', async (req, res) => {
+app.post('/api/prepare-mint', requireAuth, async (req, res) => {
     try {
         const { imageUrl, fid, username, displayName } = req.body;
+        
+        // Verify user is minting their own FID
+        if (fid !== req.userFid) {
+            return res.status(403).json({ error: 'Can only mint your own profile' });
+        }
 
         // Upload transformed image to IPFS
         const ipfsImageUrl = await uploadToIPFS(imageUrl);
